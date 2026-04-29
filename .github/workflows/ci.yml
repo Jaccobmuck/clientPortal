@@ -1,0 +1,94 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, staging, main]
+  pull_request:
+    branches: [dev, staging, main]
+
+jobs:
+  # ── Python / FastAPI ──────────────────────────────────────────────────
+  api-lint:
+    name: API — lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+        with:
+          version: "latest"
+      - name: Install dependencies
+        run: uv sync --frozen
+        working-directory: apps/api
+      - name: Ruff lint
+        run: uv run ruff check .
+        working-directory: apps/api
+      - name: Ruff format check
+        run: uv run ruff format --check .
+        working-directory: apps/api
+      - name: Mypy
+        run: uv run mypy app
+        working-directory: apps/api
+
+  api-test:
+    name: API — tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: test_db
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      ENVIRONMENT: development
+      DEBUG: "true"
+      SECRET_KEY: test-secret-key
+      DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: placeholder
+      STRIPE_SECRET_KEY: sk_test_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_placeholder
+      STRIPE_BILLING_PRICE_ID: price_placeholder
+      REDIS_URL: redis://localhost:6379
+      RESEND_API_KEY: re_placeholder
+      FRONTEND_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v4
+      - name: Install dependencies
+        run: uv sync --frozen
+        working-directory: apps/api
+      - name: Run tests
+        run: uv run pytest --cov=app --cov-report=xml -q
+        working-directory: apps/api
+
+  # ── TypeScript / Next.js ──────────────────────────────────────────────
+  web-check:
+    name: Web — lint & typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run typecheck --workspace=apps/web
+      - run: npm run lint --workspace=apps/web
+
+  workers-check:
+    name: Workers — typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run typecheck --workspace=workers
