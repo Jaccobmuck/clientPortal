@@ -3,8 +3,8 @@ InvoiceSaaS FastAPI application entrypoint.
 P0 · bootstrap — no routes yet, just the app factory.
 """
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
