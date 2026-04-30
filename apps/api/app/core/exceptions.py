@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 
 class AppError(Exception):
     """Base domain exception."""
+
     status_code: ClassVar[int] = 500
     default_detail: ClassVar[str] = "Internal server error"
 
@@ -40,6 +41,7 @@ class UnprocessableError(AppError):
 
 class InvoiceStatusError(AppError):
     """Raised when a status transition is illegal."""
+
     status_code = 409
     default_detail = "Invalid invoice status transition"
 
