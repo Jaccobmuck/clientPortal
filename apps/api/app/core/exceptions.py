@@ -3,43 +3,47 @@ Global exception handlers. Routes raise; these translate to HTTP responses.
 Never put try/except in route handlers — raise domain exceptions instead.
 """
 
+from typing import ClassVar
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 
 class AppError(Exception):
     """Base domain exception."""
-    status_code: int = 500
-    detail: str = "Internal server error"
+
+    status_code: ClassVar[int] = 500
+    default_detail: ClassVar[str] = "Internal server error"
 
     def __init__(self, detail: str | None = None) -> None:
-        self.detail = detail or self.__class__.detail
+        self.detail: str = detail or type(self).default_detail
 
 
 class NotFoundError(AppError):
     status_code = 404
-    detail = "Resource not found"
+    default_detail = "Resource not found"
 
 
 class ForbiddenError(AppError):
     status_code = 403
-    detail = "Forbidden"
+    default_detail = "Forbidden"
 
 
 class ConflictError(AppError):
     status_code = 409
-    detail = "Conflict"
+    default_detail = "Conflict"
 
 
 class UnprocessableError(AppError):
     status_code = 422
-    detail = "Unprocessable entity"
+    default_detail = "Unprocessable entity"
 
 
 class InvoiceStatusError(AppError):
     """Raised when a status transition is illegal."""
+
     status_code = 409
-    detail = "Invalid invoice status transition"
+    default_detail = "Invalid invoice status transition"
 
 
 def register_exception_handlers(app: FastAPI) -> None:
