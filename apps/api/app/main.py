@@ -4,7 +4,7 @@ P0 · bootstrap — no routes yet, just the app factory.
 """
 
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
