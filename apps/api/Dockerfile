@@ -14,7 +14,7 @@ WORKDIR /app
 # ── Dependencies layer ────────────────────────────────────────────────────
 FROM base AS deps
 COPY pyproject.toml uv.lock* ./
-RUN uv sync --frozen --no-dev
+RUN uv sync --no-dev
 
 # ── Final image ───────────────────────────────────────────────────────────
 FROM base AS runner
