@@ -2,7 +2,7 @@ FROM python:3.12-slim AS base
 
 # System deps for WeasyPrint + asyncpg
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf2.0-0 \
+    libpango-1.0-0 libpangocairo-1.0-0 libcairo2 libgdk-pixbuf-2.0-0 \
     libffi-dev libssl-dev build-essential \
     && rm -rf /var/lib/apt/lists/*
 
