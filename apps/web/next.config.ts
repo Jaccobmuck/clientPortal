@@ -1,15 +1,18 @@
 import type { NextConfig } from "next";
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
 const nextConfig: NextConfig = {
-  // Strict mode for catching issues early
   reactStrictMode: true,
 
-  // All API calls go through Next.js → FastAPI
   async rewrites() {
+    if (!apiUrl) {
+      return [];
+    }
     return [
       {
         source: "/api/v1/:path*",
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/api/v1/:path*`,
+        destination: `${apiUrl}/api/v1/:path*`,
       },
     ];
   },
