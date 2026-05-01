@@ -3,7 +3,7 @@ Central config — all env vars live here, never os.environ elsewhere.
 """
 
 from functools import lru_cache
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -32,15 +32,15 @@ class Settings(BaseSettings):
     SUPABASE_SERVICE_ROLE_KEY: str  # never expose to frontend
 
     # ── Stripe ────────────────────────────────────────────────────────────
-    STRIPE_SECRET_KEY: Optional[str] = None  # sk_test_... or sk_live_...
-    STRIPE_WEBHOOK_SECRET: Optional[str] = None  # whsec_...
-    STRIPE_BILLING_PRICE_ID: Optional[str] = None  # price_... for the SaaS subscription
+    STRIPE_SECRET_KEY: str | None = None  # sk_test_... or sk_live_...
+    STRIPE_WEBHOOK_SECRET: str | None = None  # whsec_...
+    STRIPE_BILLING_PRICE_ID: str | None = None  # price_... for the SaaS subscription
 
     # ── Redis / BullMQ ────────────────────────────────────────────────────
     REDIS_URL: str = "redis://localhost:6379"
 
     # ── Email ─────────────────────────────────────────────────────────────
-    RESEND_API_KEY: Optional[str] = None
+    RESEND_API_KEY: str | None = None
     EMAIL_FROM: str = "noreply@invoicesaas.com"
 
     # ── Frontend ──────────────────────────────────────────────────────────
