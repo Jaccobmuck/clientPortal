@@ -5,6 +5,7 @@ Central config — all env vars live here, never os.environ elsewhere.
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
