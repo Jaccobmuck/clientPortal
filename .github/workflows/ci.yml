@@ -51,11 +51,7 @@ jobs:
       DATABASE_URL: postgresql+asyncpg://postgres:postgres@localhost:5432/test_db
       SUPABASE_URL: https://placeholder.supabase.co
       SUPABASE_SERVICE_ROLE_KEY: placeholder
-      STRIPE_SECRET_KEY: sk_test_placeholder
-      STRIPE_WEBHOOK_SECRET: whsec_placeholder
-      STRIPE_BILLING_PRICE_ID: price_placeholder
       REDIS_URL: redis://localhost:6379
-      RESEND_API_KEY: re_placeholder
       FRONTEND_URL: http://localhost:3000
     steps:
       - uses: actions/checkout@v4

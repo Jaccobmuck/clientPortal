@@ -24,15 +24,6 @@ dependencies = [
     # HTTP client
     "httpx>=0.28.0",
 
-    # Stripe
-    "stripe>=11.0.0",
-
-    # Email
-    "resend>=2.0.0",
-
-    # PDF
-    "weasyprint>=63.0",
-
     # Utils
     "python-multipart>=0.0.12",
     "uuid6>=2024.1.12",
