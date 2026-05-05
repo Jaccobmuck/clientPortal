@@ -17,7 +17,6 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
         run: railway up --service api-prod --environment production
-        working-directory: apps/api
 
   deploy-workers-prod:
     name: Workers → Railway (prod)
@@ -31,7 +30,6 @@ jobs:
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
         run: railway up --service worker-prod --environment production
-        working-directory: workers
 
   deploy-web-prod:
     name: Web → Vercel (prod)
