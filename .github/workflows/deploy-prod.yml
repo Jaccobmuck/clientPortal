@@ -16,7 +16,7 @@ jobs:
       - name: Deploy API
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
-        run: railway up --service api --environment production
+        run: railway up --service api-prod --environment production
         working-directory: apps/api
 
   deploy-workers-prod:
@@ -30,7 +30,7 @@ jobs:
       - name: Deploy workers
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN_PROD }}
-        run: railway up --service workers --environment production
+        run: railway up --service worker-prod --environment production
         working-directory: workers
 
   deploy-web-prod:
