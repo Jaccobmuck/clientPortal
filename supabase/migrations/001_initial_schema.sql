@@ -12,7 +12,8 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- ── 1. users ───────────────────────────────────────────────────────────────────
+-- ── Tables ────────────────────────────────────────────────────────────────────
+
 CREATE TABLE users (
   id          uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       text NOT NULL UNIQUE,
@@ -22,15 +23,6 @@ CREATE TABLE users (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE users ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "users_self_access" ON users
-  FOR ALL USING (id = auth.uid());
-
-CREATE TRIGGER set_users_updated_at
-  BEFORE UPDATE ON users
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ── 2. organizations ───────────────────────────────────────────────────────────
 CREATE TABLE organizations (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   name        text NOT NULL,
@@ -40,20 +32,6 @@ CREATE TABLE organizations (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE organizations ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "organizations_org_access" ON organizations
-  FOR ALL USING (
-    id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
-CREATE TRIGGER set_organizations_updated_at
-  BEFORE UPDATE ON organizations
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ── 3. organization_members ────────────────────────────────────────────────────
 CREATE TABLE organization_members (
   org_id   uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -61,11 +39,6 @@ CREATE TABLE organization_members (
   PRIMARY KEY (org_id, user_id)
 );
 
-ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "org_members_access" ON organization_members
-  FOR ALL USING (user_id = auth.uid());
-
--- ── 4. clients ─────────────────────────────────────────────────────────────────
 CREATE TABLE clients (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id      uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -78,20 +51,6 @@ CREATE TABLE clients (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "clients_org_access" ON clients
-  FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
-CREATE TRIGGER set_clients_updated_at
-  BEFORE UPDATE ON clients
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ── 5. projects ────────────────────────────────────────────────────────────────
 CREATE TABLE projects (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id       uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -103,55 +62,27 @@ CREATE TABLE projects (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "projects_org_access" ON projects
-  FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
-CREATE TRIGGER set_projects_updated_at
-  BEFORE UPDATE ON projects
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ── 6. invoices ────────────────────────────────────────────────────────────────
 CREATE TABLE invoices (
-  id                       uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  org_id                   uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
-  client_id                uuid NOT NULL REFERENCES clients(id),
-  project_id               uuid REFERENCES projects(id),
-  invoice_number           text NOT NULL,
-  status                   text NOT NULL DEFAULT 'draft',
-  pay_token                uuid NOT NULL DEFAULT uuid_generate_v4() UNIQUE,
-  due_date                 date,
-  issued_at                timestamptz,
-  paid_at                  timestamptz,
-  subtotal                 numeric(12,2) NOT NULL DEFAULT 0,
-  tax_rate                 numeric(5,4) NOT NULL DEFAULT 0,
-  tax_amount               numeric(12,2) NOT NULL DEFAULT 0,
-  total                    numeric(12,2) NOT NULL DEFAULT 0,
-  notes                    text,
-  created_at               timestamptz NOT NULL DEFAULT now(),
-  updated_at               timestamptz NOT NULL DEFAULT now(),
+  id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  org_id          uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  client_id       uuid NOT NULL REFERENCES clients(id),
+  project_id      uuid REFERENCES projects(id),
+  invoice_number  text NOT NULL,
+  status          text NOT NULL DEFAULT 'draft',
+  pay_token       uuid NOT NULL DEFAULT uuid_generate_v4() UNIQUE,
+  due_date        date,
+  issued_at       timestamptz,
+  paid_at         timestamptz,
+  subtotal        numeric(12,2) NOT NULL DEFAULT 0,
+  tax_rate        numeric(5,4) NOT NULL DEFAULT 0,
+  tax_amount      numeric(12,2) NOT NULL DEFAULT 0,
+  total           numeric(12,2) NOT NULL DEFAULT 0,
+  notes           text,
+  created_at      timestamptz NOT NULL DEFAULT now(),
+  updated_at      timestamptz NOT NULL DEFAULT now(),
   UNIQUE (org_id, invoice_number)
 );
 
-ALTER TABLE invoices ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "invoices_org_access" ON invoices
-  FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
-CREATE TRIGGER set_invoices_updated_at
-  BEFORE UPDATE ON invoices
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ── 7. invoice_line_items ──────────────────────────────────────────────────────
 CREATE TABLE invoice_line_items (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id   uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
@@ -162,41 +93,18 @@ CREATE TABLE invoice_line_items (
   sort_order   int NOT NULL DEFAULT 0
 );
 
-ALTER TABLE invoice_line_items ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "invoice_line_items_org_access" ON invoice_line_items
-  FOR ALL USING (
-    invoice_id IN (
-      SELECT id FROM invoices
-      WHERE org_id IN (
-        SELECT org_id FROM organization_members
-        WHERE user_id = auth.uid()
-      )
-    )
-  );
-
--- ── 8. payments ────────────────────────────────────────────────────────────────
 CREATE TABLE payments (
-  id                         uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  invoice_id                 uuid NOT NULL REFERENCES invoices(id),
-  org_id                     uuid NOT NULL REFERENCES organizations(id),
-  amount                     numeric(12,2) NOT NULL,
-  stripe_payment_intent_id   text UNIQUE,
-  stripe_charge_id           text,
-  status                     text NOT NULL DEFAULT 'pending',
-  paid_at                    timestamptz,
-  created_at                 timestamptz NOT NULL DEFAULT now()
+  id                        uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  invoice_id                uuid NOT NULL REFERENCES invoices(id),
+  org_id                    uuid NOT NULL REFERENCES organizations(id),
+  amount                    numeric(12,2) NOT NULL,
+  stripe_payment_intent_id  text UNIQUE,
+  stripe_charge_id          text,
+  status                    text NOT NULL DEFAULT 'pending',
+  paid_at                   timestamptz,
+  created_at                timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "payments_org_access" ON payments
-  FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
--- ── 9. disputes ────────────────────────────────────────────────────────────────
 CREATE TABLE disputes (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id   uuid NOT NULL REFERENCES invoices(id),
@@ -208,20 +116,6 @@ CREATE TABLE disputes (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE disputes ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "disputes_org_access" ON disputes
-  FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
-CREATE TRIGGER set_disputes_updated_at
-  BEFORE UPDATE ON disputes
-  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
-
--- ── 10. expenses ───────────────────────────────────────────────────────────────
 CREATE TABLE expenses (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id       uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
@@ -234,16 +128,6 @@ CREATE TABLE expenses (
   created_at   timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "expenses_org_access" ON expenses
-  FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
--- ── 11. reminder_schedule ──────────────────────────────────────────────────────
 CREATE TABLE reminder_schedule (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id  uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
@@ -253,16 +137,6 @@ CREATE TABLE reminder_schedule (
   status      text NOT NULL DEFAULT 'pending'
 );
 
-ALTER TABLE reminder_schedule ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "reminder_schedule_org_access" ON reminder_schedule
-  FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
-    )
-  );
-
--- ── 12. notification_log ───────────────────────────────────────────────────────
 CREATE TABLE notification_log (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id      uuid NOT NULL REFERENCES organizations(id),
@@ -272,16 +146,87 @@ CREATE TABLE notification_log (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE notification_log ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "notification_log_org_access" ON notification_log
+-- ── RLS ───────────────────────────────────────────────────────────────────────
+
+ALTER TABLE users               ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organizations       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE organization_members ENABLE ROW LEVEL SECURITY;
+ALTER TABLE clients             ENABLE ROW LEVEL SECURITY;
+ALTER TABLE projects            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoices            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE invoice_line_items  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE payments            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE disputes            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE reminder_schedule   ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notification_log    ENABLE ROW LEVEL SECURITY;
+
+-- ── Policies ──────────────────────────────────────────────────────────────────
+
+CREATE POLICY "users_self_access" ON users
+  FOR ALL USING (id = auth.uid());
+
+CREATE POLICY "org_members_access" ON organization_members
+  FOR ALL USING (user_id = auth.uid());
+
+-- All remaining tables share the same org-membership pattern
+CREATE POLICY "organizations_org_access" ON organizations
+  FOR ALL USING (id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "clients_org_access" ON clients
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "projects_org_access" ON projects
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "invoices_org_access" ON invoices
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "invoice_line_items_org_access" ON invoice_line_items
   FOR ALL USING (
-    org_id IN (
-      SELECT org_id FROM organization_members
-      WHERE user_id = auth.uid()
+    invoice_id IN (
+      SELECT id FROM invoices
+      WHERE org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid())
     )
   );
 
--- ── Indexes ────────────────────────────────────────────────────────────────────
+CREATE POLICY "payments_org_access" ON payments
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "disputes_org_access" ON disputes
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "expenses_org_access" ON expenses
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "reminder_schedule_org_access" ON reminder_schedule
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+CREATE POLICY "notification_log_org_access" ON notification_log
+  FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
+
+-- ── Triggers ──────────────────────────────────────────────────────────────────
+
+CREATE TRIGGER set_users_updated_at
+  BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_organizations_updated_at
+  BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_clients_updated_at
+  BEFORE UPDATE ON clients FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_projects_updated_at
+  BEFORE UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_invoices_updated_at
+  BEFORE UPDATE ON invoices FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+CREATE TRIGGER set_disputes_updated_at
+  BEFORE UPDATE ON disputes FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- ── Indexes ───────────────────────────────────────────────────────────────────
+
 CREATE INDEX idx_invoices_org_id ON invoices(org_id);
 CREATE INDEX idx_invoices_client_id ON invoices(client_id);
 CREATE INDEX idx_invoices_pay_token ON invoices(pay_token);
