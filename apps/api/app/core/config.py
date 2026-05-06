@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     )
 
     # ── App ───────────────────────────────────────────────────────────────
-    ENVIRONMENT: Literal["development", "staging", "production"] = "development"
+    ENVIRONMENT: Literal["development", "production"] = "development"
     DEBUG: bool = False
     SECRET_KEY: str  # used for JWT signing — required, no default
 
