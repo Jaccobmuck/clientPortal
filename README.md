@@ -25,7 +25,7 @@ Invoicing SaaS for freelancers. Send invoices, get paid via Stripe Connect.
 ├── supabase/
 │   └── migrations/   ← SQL migration files (NNN_description.sql)
 └── .github/
-    └── workflows/    ← ci.yml, deploy-prod.yml
+    └── workflows/    ← ci.yml
 ```
 
 ## Local setup
@@ -81,14 +81,10 @@ cd workers && npm run dev
 | `dev` | localhost:8000 | localhost:3000 | Supabase dev | test keys |
 | `main` | Railway prod | Vercel prod | Supabase prod | **live keys** |
 
-## GitHub Secrets required
+## Deployment
 
-```
-RAILWAY_TOKEN_PROD
-VERCEL_TOKEN
-VERCEL_ORG_ID
-VERCEL_PROJECT_ID
-```
+Railway and Vercel both deploy via their native GitHub integrations — no deploy workflow needed.
+`main` branch → auto-deploy to prod on both platforms.
 
 ## Commit discipline
 
