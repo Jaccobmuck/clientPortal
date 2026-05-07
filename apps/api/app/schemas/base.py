@@ -1,10 +1,7 @@
 from datetime import UTC, datetime
-from typing import Generic, TypeVar
 from uuid import uuid4
 
 from pydantic import BaseModel, Field
-
-T = TypeVar("T")
 
 
 class ErrorDetail(BaseModel):
@@ -22,7 +19,7 @@ class PaginationMeta(BaseModel):
     has_prev: bool
 
 
-class BaseResponse(BaseModel, Generic[T]):
+class BaseResponse[T](BaseModel):
     success: bool
     data: T | None = None
     error: ErrorDetail | None = None
@@ -30,7 +27,7 @@ class BaseResponse(BaseModel, Generic[T]):
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
-class PaginatedResponse(BaseModel, Generic[T]):
+class PaginatedResponse[T](BaseModel):
     success: bool
     data: list[T]
     error: ErrorDetail | None = None
