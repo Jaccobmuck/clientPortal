@@ -2,9 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.health import router as health_router
-from app.core.exceptions import register_exception_handlers
 from app.core.lifespan import lifespan
 from app.core.settings import settings
+from app.middleware.exception_handlers import register_exception_handlers
+from app.middleware.request_id import RequestIDMiddleware
 
 
 def create_app() -> FastAPI:
@@ -23,6 +24,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(RequestIDMiddleware)
 
     register_exception_handlers(app)
     app.include_router(health_router, prefix="/api/v1")
