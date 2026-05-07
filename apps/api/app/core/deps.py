@@ -6,9 +6,9 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jose import JWTError, jwt
 from supabase import AsyncClient
 
-from app.core.exceptions import ForbiddenError
 from app.core.settings import settings
 from app.db.supabase import get_supabase
+from app.exceptions import ForbiddenError
 
 _bearer = HTTPBearer(auto_error=False)
 _depends_bearer = Depends(_bearer)
