@@ -6,7 +6,6 @@ to the exception handler layer.
 
 
 class AppException(Exception):
-
     _default_message: str = "Internal server error"
     _default_code: str = "internal_error"
 

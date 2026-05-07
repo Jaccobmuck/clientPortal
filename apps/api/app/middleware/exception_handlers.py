@@ -45,9 +45,7 @@ def _get_status_code(exc: AppException) -> int:
     return 500
 
 
-def _error_response(
-    status_code: int, error: ErrorDetail, request_id: str
-) -> JSONResponse:
+def _error_response(status_code: int, error: ErrorDetail, request_id: str) -> JSONResponse:
     body = BaseResponse[None](
         success=False,
         data=None,
@@ -67,9 +65,7 @@ async def _handle_app_exception(request: Request, exc: AppException) -> JSONResp
     return _error_response(status_code, error, request_id)
 
 
-async def _handle_validation_error(
-    request: Request, exc: RequestValidationError
-) -> JSONResponse:
+async def _handle_validation_error(request: Request, exc: RequestValidationError) -> JSONResponse:
     request_id = _get_request_id(request)
     first = exc.errors()[0] if exc.errors() else {}
     field = " -> ".join(str(loc) for loc in first.get("loc", []))
@@ -90,9 +86,7 @@ async def _handle_http_exception(request: Request, exc: HTTPException) -> JSONRe
     return _error_response(exc.status_code, error, request_id)
 
 
-async def _handle_unhandled_exception(
-    request: Request, exc: Exception
-) -> JSONResponse:
+async def _handle_unhandled_exception(request: Request, exc: Exception) -> JSONResponse:
     request_id = _get_request_id(request)
     logger.error(
         "Unhandled exception [request_id=%s]:\n%s",
