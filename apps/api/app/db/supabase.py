@@ -1,5 +1,3 @@
-from functools import lru_cache
-
 from supabase import AsyncClient, acreate_client
 
 from app.core.settings import settings

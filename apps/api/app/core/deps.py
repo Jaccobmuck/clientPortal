@@ -1,5 +1,5 @@
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
-from typing import AsyncIterator
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -11,6 +11,7 @@ from app.core.settings import settings
 from app.db.supabase import get_supabase
 
 _bearer = HTTPBearer(auto_error=False)
+_depends_bearer = Depends(_bearer)
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,7 +26,7 @@ async def get_db() -> AsyncIterator[AsyncClient]:
 
 
 async def get_current_user(
-    creds: HTTPAuthorizationCredentials | None = Depends(_bearer),
+    creds: HTTPAuthorizationCredentials | None = _depends_bearer,
 ) -> UserToken:
     if creds is None:
         raise ForbiddenError("Missing authorization header")
@@ -36,8 +37,8 @@ async def get_current_user(
             algorithms=["HS256"],
             options={"verify_aud": False},
         )
-    except JWTError:
-        raise ForbiddenError("Invalid or expired token")
+    except JWTError as err:
+        raise ForbiddenError("Invalid or expired token") from err
     sub = payload.get("sub")
     email = payload.get("email")
     if not sub or not email:
