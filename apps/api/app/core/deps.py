@@ -1,50 +1,66 @@
 from collections.abc import AsyncIterator
-from dataclasses import dataclass
+from uuid import UUID
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError, jwt
+from postgrest import AsyncPostgrestClient
 from supabase import AsyncClient
+from supabase_auth.errors import AuthApiError
 
 from app.core.settings import settings
 from app.db.supabase import get_supabase
-from app.exceptions import ForbiddenError
+from app.exceptions import UnauthorizedError
+from app.schemas.auth import AuthUser
 
-_bearer = HTTPBearer(auto_error=False)
+_bearer = HTTPBearer()
 _depends_bearer = Depends(_bearer)
-
-
-@dataclass(frozen=True, slots=True)
-class UserToken:
-    user_id: str
-    email: str
-    role: str
 
 
 async def get_db() -> AsyncIterator[AsyncClient]:
     yield await get_supabase()
 
 
+_depends_db = Depends(get_db)
+
+
 async def get_current_user(
-    creds: HTTPAuthorizationCredentials | None = _depends_bearer,
-) -> UserToken:
-    if creds is None:
-        raise ForbiddenError("Missing authorization header")
+    credentials: HTTPAuthorizationCredentials = _depends_bearer,
+    supabase: AsyncClient = _depends_db,
+) -> AuthUser:
     try:
-        payload = jwt.decode(
-            creds.credentials,
-            settings.SUPABASE_SERVICE_ROLE_KEY,
-            algorithms=["HS256"],
-            options={"verify_aud": False},
+        response = await supabase.auth.get_user(credentials.credentials)
+    except AuthApiError as exc:
+        raise UnauthorizedError(
+            "invalid or expired token",
+            code="invalid_token",
+        ) from exc
+
+    user = response.user if response is not None else None
+    if user is None:
+        raise UnauthorizedError(
+            "invalid or expired token",
+            code="invalid_token",
         )
-    except JWTError as err:
-        raise ForbiddenError("Invalid or expired token") from err
-    sub = payload.get("sub")
-    email = payload.get("email")
-    if not sub or not email:
-        raise ForbiddenError("Invalid token claims")
-    return UserToken(
-        user_id=sub,
-        email=email,
-        role=payload.get("role", "member"),
-    )
+    return AuthUser(user_id=UUID(user.id), email=user.email)
+
+
+_depends_current_user = Depends(get_current_user)
+
+
+async def get_user_scoped_db(
+    credentials: HTTPAuthorizationCredentials = _depends_bearer,
+    _user: AuthUser = _depends_current_user,
+) -> AsyncIterator[AsyncPostgrestClient]:
+    # The Supabase API gateway requires `apikey` to be a valid project key;
+    # the service-role key satisfies that. The user's JWT in `Authorization`
+    # is what PostgREST uses for auth.uid() and RLS policy evaluation, so
+    # tenancy is bound to the calling user, not the service role.
+    headers = {
+        "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
+        "Authorization": f"Bearer {credentials.credentials}",
+    }
+    async with AsyncPostgrestClient(
+        f"{settings.SUPABASE_URL}/rest/v1",
+        headers=headers,
+    ) as client:
+        yield client
