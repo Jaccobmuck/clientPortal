@@ -2,9 +2,9 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends
-from supabase import AsyncClient
+from postgrest import AsyncPostgrestClient
 
-from app.core.deps import get_current_user, get_db
+from app.core.deps import get_current_user, get_user_scoped_db
 from app.repositories.org import create_org, list_orgs_for_user, update_org
 from app.schemas.auth import AuthUser
 from app.schemas.base import BaseResponse
@@ -13,7 +13,7 @@ from app.schemas.org import CreateOrgRequest, OrgResponse, UpdateOrgRequest
 router = APIRouter(tags=["organizations"])
 
 CurrentUser = Annotated[AuthUser, Depends(get_current_user)]
-SupabaseDep = Annotated[AsyncClient, Depends(get_db)]
+SupabaseDep = Annotated[AsyncPostgrestClient, Depends(get_user_scoped_db)]
 
 
 @router.post("/organizations")

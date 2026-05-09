@@ -1,8 +1,8 @@
 from typing import Any
 from uuid import UUID
 
+from postgrest import AsyncPostgrestClient
 from postgrest.exceptions import APIError
-from supabase import AsyncClient
 
 from app.exceptions import (
     ConflictError,
@@ -30,7 +30,7 @@ def _slug_conflict() -> ConflictError:
 
 
 async def create_org(
-    client: AsyncClient,
+    client: AsyncPostgrestClient,
     *,
     user_id: UUID,
     user_email: str | None,
@@ -60,13 +60,13 @@ async def create_org(
 
 
 async def list_orgs_for_user(
-    client: AsyncClient,
+    client: AsyncPostgrestClient,
     *,
     user_id: UUID,
 ) -> list[OrgResponse]:
     try:
         membership = (
-            await client.table("organization_members")
+            await client.from_("organization_members")
             .select("org_id")
             .eq("user_id", str(user_id))
             .execute()
@@ -80,7 +80,7 @@ async def list_orgs_for_user(
 
     try:
         orgs = (
-            await client.table("organizations")
+            await client.from_("organizations")
             .select(_ORG_COLUMNS)
             .in_("id", org_ids)
             .execute()
@@ -92,7 +92,7 @@ async def list_orgs_for_user(
 
 
 async def update_org(
-    client: AsyncClient,
+    client: AsyncPostgrestClient,
     *,
     org_id: UUID,
     user_id: UUID,
@@ -100,7 +100,7 @@ async def update_org(
 ) -> OrgResponse:
     try:
         membership = (
-            await client.table("organization_members")
+            await client.from_("organization_members")
             .select("role")
             .eq("org_id", str(org_id))
             .eq("user_id", str(user_id))
@@ -121,7 +121,7 @@ async def update_org(
 
     try:
         response = (
-            await client.table("organizations")
+            await client.from_("organizations")
             .update(fields)
             .eq("id", str(org_id))
             .select(_ORG_COLUMNS)
