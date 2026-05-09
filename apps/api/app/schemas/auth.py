@@ -25,3 +25,8 @@ class AuthTokenData(BaseModel):
     refresh_token: str
     expires_in: int
     user: AuthUserData
+
+
+class AuthUser(BaseModel):
+    user_id: UUID
+    email: str | None = None
