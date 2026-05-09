@@ -2,7 +2,9 @@ from datetime import datetime
 from typing import Self
 from uuid import UUID
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
+
+from app.core.permissions import OrgRole
 
 _SLUG_PATTERN = r"^[a-z0-9][a-z0-9-]{1,46}[a-z0-9]$"
 
@@ -29,3 +31,22 @@ class OrgResponse(BaseModel):
     slug: str
     owner_id: UUID
     created_at: datetime
+
+
+class InviteMemberRequest(BaseModel):
+    email: EmailStr
+    role: OrgRole
+
+    @field_validator("role")
+    @classmethod
+    def _reject_owner(cls, value: OrgRole) -> OrgRole:
+        if value is OrgRole.OWNER:
+            raise ValueError("owner role cannot be assigned via invite")
+        return value
+
+
+class MemberResponse(BaseModel):
+    user_id: UUID
+    email: str | None
+    role: OrgRole
+    joined_at: datetime

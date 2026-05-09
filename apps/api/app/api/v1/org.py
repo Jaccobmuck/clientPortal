@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from postgrest import AsyncPostgrestClient
 
 from app.core.deps import get_current_user, get_user_scoped_db
+from app.core.tier_guard import require_org_creation_allowed
 from app.repositories.org import create_org, list_orgs_for_user, update_org
 from app.schemas.auth import AuthUser
 from app.schemas.base import BaseResponse
@@ -16,7 +17,7 @@ CurrentUser = Annotated[AuthUser, Depends(get_current_user)]
 SupabaseDep = Annotated[AsyncPostgrestClient, Depends(get_user_scoped_db)]
 
 
-@router.post("/organizations")
+@router.post("/organizations", dependencies=[Depends(require_org_creation_allowed)])
 async def create_organization(
     body: CreateOrgRequest,
     user: CurrentUser,

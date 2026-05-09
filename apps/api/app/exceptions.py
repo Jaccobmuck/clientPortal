@@ -50,3 +50,8 @@ class ForbiddenError(AppException):
 class InternalError(AppException):
     _default_message = "Internal server error"
     _default_code = "internal_error"
+
+
+class SubscriptionRequiredError(AppException):
+    _default_message = "upgrade to a paid plan to create additional organizations"
+    _default_code = "subscription_required"
