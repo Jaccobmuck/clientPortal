@@ -21,6 +21,7 @@ class Settings(BaseSettings):
     REDIS_URL: str = "redis://localhost:6379"
     FRONTEND_URL: str = "http://localhost:3000"
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
+    FREE_TIER_ORG_LIMIT: int = 1
 
 
 @lru_cache
