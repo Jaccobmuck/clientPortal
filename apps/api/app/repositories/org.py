@@ -79,12 +79,7 @@ async def list_orgs_for_user(
         return []
 
     try:
-        orgs = (
-            await client.from_("organizations")
-            .select(_ORG_COLUMNS)
-            .in_("id", org_ids)
-            .execute()
-        )
+        orgs = await client.from_("organizations").select(_ORG_COLUMNS).in_("id", org_ids).execute()
     except APIError as exc:
         raise InternalError from exc
 
