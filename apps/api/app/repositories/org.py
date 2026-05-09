@@ -1,4 +1,4 @@
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from postgrest import AsyncPostgrestClient
@@ -74,7 +74,8 @@ async def list_orgs_for_user(
     except APIError as exc:
         raise InternalError from exc
 
-    org_ids = [row["org_id"] for row in (membership.data or [])]
+    membership_rows = cast("list[dict[str, Any]]", membership.data or [])
+    org_ids = [row["org_id"] for row in membership_rows]
     if not org_ids:
         return []
 
@@ -105,7 +106,7 @@ async def update_org(
     except APIError as exc:
         raise InternalError from exc
 
-    rows = membership.data or []
+    rows = cast("list[dict[str, Any]]", membership.data or [])
     if not rows:
         raise NotFoundError("organization not found", code="org_not_found")
     if rows[0].get("role") != "owner":
