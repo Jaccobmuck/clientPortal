@@ -13,6 +13,7 @@ from app.exceptions import (
     ForbiddenError,
     InternalError,
     NotFoundError,
+    SubscriptionRequiredError,
     UnauthorizedError,
     ValidationError,
 )
@@ -26,6 +27,7 @@ _STATUS_MAP: dict[type[AppException], int] = {
     ConflictError: 409,
     UnauthorizedError: 401,
     ForbiddenError: 403,
+    SubscriptionRequiredError: 402,
     InternalError: 500,
     AppException: 500,
 }
