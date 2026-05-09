@@ -4,12 +4,12 @@ Every role-based decision in the codebase routes through this module.
 No router, repository, or schema may compare role strings inline.
 """
 
-from enum import Enum
+from enum import StrEnum
 
 from app.exceptions import ForbiddenError
 
 
-class OrgRole(str, Enum):
+class OrgRole(StrEnum):
     OWNER = "owner"
     ADMIN = "admin"
     MEMBER = "member"
