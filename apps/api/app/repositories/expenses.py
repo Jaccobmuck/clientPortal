@@ -97,14 +97,13 @@ async def create_expense(
     if "project_id" in payload and payload["project_id"] is not None:
         payload["project_id"] = str(payload["project_id"])
     if "incurred_at" in payload:
-        payload["incurred_at"] = payload["incurred_at"].isoformat() if hasattr(payload["incurred_at"], "isoformat") else payload["incurred_at"]
-    try:
-        response = (
-            await client.from_("expenses")
-            .insert(payload)
-            .select(_COLUMNS)
-            .execute()
+        payload["incurred_at"] = (
+            payload["incurred_at"].isoformat()
+            if hasattr(payload["incurred_at"], "isoformat")
+            else payload["incurred_at"]
         )
+    try:
+        response = await client.from_("expenses").insert(payload).select(_COLUMNS).execute()
     except APIError as exc:
         raise InternalError from exc
 

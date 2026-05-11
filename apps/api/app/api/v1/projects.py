@@ -86,9 +86,7 @@ async def delete_project(
     ctx: OrgUser,
     db: SupabaseDep,
 ) -> BaseResponse[None]:
-    deleted = await repo.soft_delete_project(
-        db, org_id=ctx.org_id, project_id=project_id
-    )
+    deleted = await repo.soft_delete_project(db, org_id=ctx.org_id, project_id=project_id)
     if not deleted:
         raise NotFoundError("project not found", code="project_not_found")
     return BaseResponse(success=True, data=None)

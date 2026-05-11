@@ -73,12 +73,7 @@ async def create_project(
     if "client_id" in payload:
         payload["client_id"] = str(payload["client_id"])
     try:
-        response = (
-            await client.from_("projects")
-            .insert(payload)
-            .select(_COLUMNS)
-            .execute()
-        )
+        response = await client.from_("projects").insert(payload).select(_COLUMNS).execute()
     except APIError as exc:
         raise InternalError from exc
 

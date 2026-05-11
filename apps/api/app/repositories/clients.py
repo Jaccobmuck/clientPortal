@@ -27,9 +27,7 @@ async def list_clients(
             .is_("deleted_at", "null")
         )
         if search:
-            query = query.or_(
-                f"name.ilike.%{search}%,email.ilike.%{search}%"
-            )
+            query = query.or_(f"name.ilike.%{search}%,email.ilike.%{search}%")
         response = await query.range(offset, offset + limit - 1).execute()
     except APIError as exc:
         raise InternalError from exc

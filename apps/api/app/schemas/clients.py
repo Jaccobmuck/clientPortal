@@ -22,10 +22,7 @@ class UpdateClientRequest(BaseModel):
 
     @model_validator(mode="after")
     def _at_least_one_field(self) -> Self:
-        if all(
-            v is None
-            for v in (self.name, self.email, self.phone, self.company, self.notes)
-        ):
+        if all(v is None for v in (self.name, self.email, self.phone, self.company, self.notes)):
             raise ValueError("at least one field is required")
         return self
 

@@ -97,9 +97,7 @@ async def delete_expense(
     ctx: OrgUser,
     db: SupabaseDep,
 ) -> BaseResponse[None]:
-    deleted = await repo.soft_delete_expense(
-        db, org_id=ctx.org_id, expense_id=expense_id
-    )
+    deleted = await repo.soft_delete_expense(db, org_id=ctx.org_id, expense_id=expense_id)
     if not deleted:
         raise NotFoundError("expense not found", code="expense_not_found")
     return BaseResponse(success=True, data=None)
