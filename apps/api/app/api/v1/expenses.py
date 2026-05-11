@@ -17,6 +17,8 @@ from app.schemas.expenses import (
     UpdateExpenseRequest,
 )
 
+_depends_supabase = Depends(get_db)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
@@ -109,7 +111,7 @@ async def upload_receipt(
     file: UploadFile,
     ctx: OrgUser,
     db: SupabaseDep,
-    supabase: AsyncClient = Depends(get_db),
+    supabase: AsyncClient = _depends_supabase,
 ) -> BaseResponse[ExpenseResponse]:
     expense = await repo.get_expense(db, org_id=ctx.org_id, expense_id=expense_id)
     if expense is None:

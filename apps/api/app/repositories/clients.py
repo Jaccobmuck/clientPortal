@@ -4,7 +4,7 @@ from uuid import UUID
 from postgrest import AsyncPostgrestClient
 from postgrest.exceptions import APIError
 
-from app.exceptions import InternalError, NotFoundError
+from app.exceptions import InternalError
 from app.repositories._helpers import utc_now
 from app.schemas.clients import ClientResponse
 

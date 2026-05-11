@@ -72,8 +72,11 @@ class UserContext(BaseModel):
 _depends_user_scoped_db = Depends(get_user_scoped_db)
 
 
+_depends_header_org_id = Header()
+
+
 async def get_org_context(
-    x_org_id: UUID = Header(),
+    x_org_id: UUID = _depends_header_org_id,
     user: AuthUser = _depends_current_user,
     db: AsyncPostgrestClient = _depends_user_scoped_db,
 ) -> UserContext:
