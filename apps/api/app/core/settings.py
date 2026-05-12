@@ -22,6 +22,14 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
     FREE_TIER_ORG_LIMIT: int = 1
+    RECEIPT_BUCKET: str = "receipts"
+    RECEIPT_MAX_SIZE_MB: int = 10
+    RECEIPT_ALLOWED_TYPES: list[str] = [
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "application/pdf",
+    ]
 
 
 @lru_cache
