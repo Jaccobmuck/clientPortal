@@ -12,7 +12,9 @@ from app.schemas.invoices import (
     InvoiceResponse,
     InvoiceStatus,
     UpdateInvoiceRequest,
+    VoidInvoiceRequest,
 )
+from app.utils.notification_log import write_audit
 from app.utils.queues import enqueue_email, enqueue_pdf
 from app.utils.status_machine import assert_transition
 
@@ -113,5 +115,37 @@ async def send_invoice(
 
     await enqueue_pdf(db, invoice_id=invoice_id, org_id=ctx.org_id)
     await enqueue_email(db, invoice_id=invoice_id, org_id=ctx.org_id)
+
+    return BaseResponse(success=True, data=updated)
+
+
+@router.post("/{invoice_id}/void")
+async def void_invoice(
+    invoice_id: UUID,
+    body: VoidInvoiceRequest,
+    ctx: OrgUser,
+    db: SupabaseDep,
+) -> BaseResponse[InvoiceResponse]:
+    invoice = await repo.get_invoice(db, org_id=ctx.org_id, invoice_id=invoice_id)
+    if invoice is None:
+        raise NotFoundError("invoice not found", code="invoice_not_found")
+
+    assert_transition(invoice.status, "void")
+
+    updated = await repo.void_invoice(
+        db,
+        org_id=ctx.org_id,
+        invoice_id=invoice_id,
+        voided_at=utc_now(),
+    )
+
+    await write_audit(
+        db,
+        invoice_id=invoice_id,
+        event="invoice_voided",
+        note=body.reason,
+        org_id=ctx.org_id,
+        user_id=ctx.user_id,
+    )
 
     return BaseResponse(success=True, data=updated)

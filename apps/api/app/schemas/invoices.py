@@ -79,6 +79,17 @@ class UpdateInvoiceRequest(BaseModel):
         return self
 
 
+class VoidInvoiceRequest(BaseModel):
+    reason: str = Field(min_length=1, max_length=1000)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def _strip_reason(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip()
+        return v
+
+
 class InvoiceResponse(BaseModel):
     id: UUID
     org_id: UUID

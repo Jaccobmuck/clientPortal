@@ -449,3 +449,35 @@ async def send_invoice(
 
     send_items = await list_line_items(client, invoice_id=invoice_id)
     return _row_to_response(rows[0], send_items)
+
+
+async def void_invoice(
+    client: AsyncPostgrestClient,
+    *,
+    org_id: UUID,
+    invoice_id: UUID,
+    voided_at: str,
+) -> InvoiceResponse | None:
+    payload: dict[str, Any] = {
+        "status": "void",
+        "voided_at": voided_at,
+    }
+
+    try:
+        response = (
+            await client.from_("invoices")
+            .update(payload)
+            .eq("id", str(invoice_id))
+            .eq("org_id", str(org_id))
+            .select(_INVOICE_COLUMNS)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    if not rows:
+        return None
+
+    void_items = await list_line_items(client, invoice_id=invoice_id)
+    return _row_to_response(rows[0], void_items)
