@@ -16,11 +16,23 @@ class InvoiceStatus(StrEnum):
     OVERDUE = "overdue"
 
 
-class LineItemInput(BaseModel):
+# ---------------------------------------------------------------------------
+# Request schemas
+# ---------------------------------------------------------------------------
+
+
+class LineItemIn(BaseModel):
     description: str = Field(min_length=1)
     quantity: str = Field(default="1")
-    unit_price: int = Field(gt=0)
-    sort_order: int = Field(default=0, ge=0)
+    unit_price_cents: int = Field(ge=0)
+    tax_rate_bp: int | None = Field(default=None, ge=0, le=10000)
+
+    @field_validator("description", mode="before")
+    @classmethod
+    def _strip_description(cls, v: str) -> str:
+        if isinstance(v, str):
+            return v.strip()
+        return v
 
     @field_validator("quantity")
     @classmethod
@@ -36,47 +48,51 @@ class LineItemInput(BaseModel):
         return v
 
 
-class LineItemResponse(BaseModel):
-    id: UUID
-    invoice_id: UUID
-    description: str
-    quantity: str
-    unit_price: int
-    amount: int
-    sort_order: int
-
-
-class CreateInvoiceRequest(BaseModel):
+class CreateInvoice(BaseModel):
     client_id: UUID
     project_id: UUID | None = None
-    due_date: date | None = None
-    tax_rate: int = Field(default=0, ge=0, le=10000)
-    notes: str | None = Field(default=None, max_length=2000)
-    line_items: list[LineItemInput] = Field(default_factory=list)
-
-
-class UpdateInvoiceRequest(BaseModel):
-    client_id: UUID | None = None
-    project_id: UUID | None = None
-    due_date: date | None = None
-    tax_rate: int | None = Field(default=None, ge=0, le=10000)
-    notes: str | None = None
-    line_items: list[LineItemInput] | None = None
+    issue_date: date
+    due_date: date
+    line_items: list[LineItemIn] = Field(min_length=1)
+    memo: str | None = None
 
     @model_validator(mode="after")
-    def _at_least_one_field(self) -> Self:
+    def _due_after_issue(self) -> Self:
+        if self.due_date < self.issue_date:
+            raise ValueError("due_date must be greater than or equal to issue_date")
+        return self
+
+
+class UpdateInvoiceDraft(BaseModel):
+    client_id: UUID | None = None
+    project_id: UUID | None = None
+    issue_date: date | None = None
+    due_date: date | None = None
+    memo: str | None = None
+    line_items: list[LineItemIn] | None = None
+
+    @model_validator(mode="after")
+    def _validate_partial(self) -> Self:
         if all(
             v is None
             for v in (
                 self.client_id,
                 self.project_id,
+                self.issue_date,
                 self.due_date,
-                self.tax_rate,
-                self.notes,
+                self.memo,
                 self.line_items,
             )
         ):
             raise ValueError("at least one field is required")
+
+        if self.line_items is not None and len(self.line_items) == 0:
+            raise ValueError("line_items must not be empty when provided")
+
+        if self.issue_date is not None and self.due_date is not None:
+            if self.due_date < self.issue_date:
+                raise ValueError("due_date must be greater than or equal to issue_date")
+
         return self
 
 
@@ -89,6 +105,21 @@ class VoidInvoiceRequest(BaseModel):
         if isinstance(v, str):
             return v.strip()
         return v
+
+
+# ---------------------------------------------------------------------------
+# Response schemas
+# ---------------------------------------------------------------------------
+
+
+class LineItemResponse(BaseModel):
+    id: UUID
+    invoice_id: UUID
+    description: str
+    quantity: str
+    unit_price: int
+    amount: int
+    sort_order: int
 
 
 class InvoiceResponse(BaseModel):
@@ -113,3 +144,12 @@ class InvoiceResponse(BaseModel):
     line_items: list[LineItemResponse]
     created_at: datetime
     updated_at: datetime
+
+
+# ---------------------------------------------------------------------------
+# Backward-compat aliases (import compatibility for existing routes/repos)
+# ---------------------------------------------------------------------------
+
+LineItemInput = LineItemIn
+CreateInvoiceRequest = CreateInvoice
+UpdateInvoiceRequest = UpdateInvoiceDraft
