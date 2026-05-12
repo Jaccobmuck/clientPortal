@@ -2,11 +2,12 @@ from app.exceptions import ConflictError
 
 VALID_TRANSITIONS: dict[str, list[str]] = {
     "draft": ["sent", "void"],
-    "sent": ["disputed", "paid", "void"],
+    "sent": ["disputed", "paid", "void", "overdue"],
     "disputed": ["resolved", "void"],
     "resolved": ["paid", "void"],
     "paid": [],
     "void": [],
+    "overdue": ["paid", "void"],
 }
 
 

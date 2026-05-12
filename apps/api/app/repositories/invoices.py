@@ -29,12 +29,11 @@ _MAX_INVOICE_NUMBER_RETRIES = 3
 def _row_to_line_item(row: dict[str, Any]) -> LineItemResponse:
     return LineItemResponse(
         id=row["id"],
-        invoice_id=row["invoice_id"],
         description=row["description"],
         quantity=str(row["quantity"]),
-        unit_price=db_to_cents(row["unit_price"]),
-        amount=db_to_cents(row["amount"]),
-        sort_order=row["sort_order"],
+        unit_price_cents=db_to_cents(row["unit_price"]),
+        tax_rate_bp=db_to_basis_points(row["tax_rate"]) if row.get("tax_rate") else None,
+        line_total_cents=db_to_cents(row["amount"]),
     )
 
 
@@ -46,18 +45,12 @@ def _row_to_response(row: dict[str, Any], line_items: list[LineItemResponse]) ->
         project_id=row.get("project_id"),
         invoice_number=row["invoice_number"],
         status=row["status"],
-        pay_token=row["pay_token"],
+        issue_date=row.get("issued_at"),
         due_date=row.get("due_date"),
-        issued_at=row.get("issued_at"),
-        sent_at=row.get("sent_at"),
-        paid_at=row.get("paid_at"),
-        voided_at=row.get("voided_at"),
-        locked=row["locked"],
-        subtotal=db_to_cents(row["subtotal"]),
-        tax_rate=db_to_basis_points(row["tax_rate"]),
-        tax_amount=db_to_cents(row["tax_amount"]),
-        total=db_to_cents(row["total"]),
-        notes=row.get("notes"),
+        subtotal_cents=db_to_cents(row["subtotal"]),
+        tax_cents=db_to_cents(row["tax_amount"]),
+        total_cents=db_to_cents(row["total"]),
+        memo=row.get("notes"),
         line_items=line_items,
         created_at=row["created_at"],
         updated_at=row["updated_at"],
@@ -333,7 +326,7 @@ async def update_invoice(
     existing = await get_invoice(client, org_id=org_id, invoice_id=invoice_id)
     if existing is None:
         return None
-    if existing.locked:
+    if existing.status != "draft":
         raise ConflictError("invoice is locked", code="invoice_locked")
 
     client_id = data.get("client_id")
@@ -374,7 +367,21 @@ async def update_invoice(
         except APIError as exc:
             raise InternalError from exc
 
-        rate = tax_rate_bp if tax_rate_bp is not None else existing.tax_rate
+        if tax_rate_bp is None:
+            try:
+                tr_resp = (
+                    await client.from_("invoices")
+                    .select("tax_rate")
+                    .eq("id", str(invoice_id))
+                    .limit(1)
+                    .execute()
+                )
+            except APIError as exc:
+                raise InternalError from exc
+            tr_rows = cast("list[dict[str, Any]]", tr_resp.data or [])
+            tax_rate_bp = db_to_basis_points(tr_rows[0]["tax_rate"]) if tr_rows else 0
+
+        rate = tax_rate_bp
         subtotal, tax_amount, total = _compute_totals(new_line_items, rate)
         payload["subtotal"] = cents_to_db(subtotal)
         payload["tax_amount"] = cents_to_db(tax_amount)
@@ -386,7 +393,7 @@ async def update_invoice(
     elif tax_rate_bp is not None:
         payload["tax_rate"] = basis_points_to_db(tax_rate_bp)
         current_items = await list_line_items(client, invoice_id=invoice_id)
-        raw = [{"quantity": li.quantity, "unit_price": li.unit_price} for li in current_items]
+        raw = [{"quantity": li.quantity, "unit_price": li.unit_price_cents} for li in current_items]
         subtotal, tax_amount, total = _compute_totals(raw, tax_rate_bp)
         payload["subtotal"] = cents_to_db(subtotal)
         payload["tax_amount"] = cents_to_db(tax_amount)

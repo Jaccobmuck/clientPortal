@@ -94,7 +94,7 @@ async def send_invoice(
     if invoice is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
 
-    if invoice.locked:
+    if invoice.status != InvoiceStatus.DRAFT:
         raise ConflictError("invoice is already locked", code="invoice_locked")
 
     line_items = await repo.list_line_items(db, invoice_id=invoice_id)
@@ -103,14 +103,12 @@ async def send_invoice(
 
     assert_transition(invoice.status, "sent")
 
-    pay_token = uuid4() if invoice.pay_token is None else None
-
     updated = await repo.send_invoice(
         db,
         org_id=ctx.org_id,
         invoice_id=invoice_id,
         sent_at=utc_now(),
-        pay_token=pay_token,
+        pay_token=uuid4(),
     )
 
     await enqueue_pdf(db, invoice_id=invoice_id, org_id=ctx.org_id)
