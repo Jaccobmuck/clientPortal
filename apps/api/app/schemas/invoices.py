@@ -13,6 +13,7 @@ class InvoiceStatus(StrEnum):
     RESOLVED = "resolved"
     PAID = "paid"
     VOID = "void"
+    OVERDUE = "overdue"
 
 
 class LineItemInput(BaseModel):
