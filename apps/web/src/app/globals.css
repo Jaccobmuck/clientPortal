@@ -382,3 +382,206 @@ button {
     grid-template-columns: 1fr;
   }
 }
+
+.dashboard-page {
+  padding: clamp(0.8rem, 2vw, 1.5rem);
+}
+
+.app-shell {
+  min-height: calc(100vh - clamp(1.6rem, 4vw, 3rem));
+  overflow: hidden;
+  border: 1px solid rgba(182, 230, 197, 0.82);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.66), rgba(245, 255, 247, 0.84)),
+    var(--bg-soft);
+  box-shadow: var(--shadow-soft);
+}
+
+.top-nav {
+  display: grid;
+  grid-template-columns: auto minmax(18rem, 1fr) auto;
+  align-items: center;
+  gap: 1rem;
+  border-bottom: 1px solid rgba(182, 230, 197, 0.76);
+  background: rgba(255, 255, 255, 0.7);
+  padding: 1rem clamp(1rem, 3vw, 2rem);
+}
+
+.top-nav__brand {
+  display: inline-flex;
+}
+
+.top-nav__links {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}
+
+.top-nav__link {
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  font-weight: 800;
+  padding: 0.65rem 0.95rem;
+  transition:
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.top-nav__link:hover,
+.top-nav__link.is-active {
+  background: var(--surface-mint);
+  color: var(--primary-dark);
+}
+
+.top-nav__tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.search-box {
+  position: relative;
+  display: block;
+}
+
+.search-box span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+.search-box input {
+  width: min(15rem, 22vw);
+  min-height: 2.75rem;
+  border: 1px solid rgba(182, 230, 197, 0.86);
+  border-radius: 999px;
+  outline: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 0 1rem;
+}
+
+.search-box input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(88, 204, 122, 0.14);
+}
+
+.top-nav__login {
+  border-radius: 999px;
+  color: var(--primary-dark);
+  font-size: 0.88rem;
+  font-weight: 800;
+  padding: 0.7rem 0.9rem;
+}
+
+.profile-chip {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border: 1px solid rgba(36, 104, 74, 0.1);
+  border-radius: 50%;
+  background: var(--primary-dark);
+  box-shadow: 0 12px 28px rgba(36, 104, 74, 0.18);
+  color: var(--surface);
+  font-size: 0.88rem;
+  font-weight: 900;
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem;
+  padding: clamp(1.4rem, 4vw, 2.3rem) clamp(1rem, 3vw, 2rem) 1.2rem;
+}
+
+.dashboard-header h1 {
+  margin: 0.45rem 0;
+  font-size: clamp(2.35rem, 5vw, 4.8rem);
+  line-height: 0.92;
+}
+
+.dashboard-header p:not(.eyebrow),
+.dashboard-empty p:not(.eyebrow) {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.dashboard-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.7rem;
+}
+
+.dashboard-header__actions .primary-button,
+.dashboard-header__actions .ghost-button {
+  padding: 0 1.15rem;
+}
+
+.dashboard-empty {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0 clamp(1rem, 3vw, 2rem) clamp(1rem, 3vw, 2rem);
+  padding: clamp(1.4rem, 3vw, 2rem);
+}
+
+.dashboard-empty h2 {
+  margin: 0;
+  font-size: clamp(1.45rem, 3vw, 2.1rem);
+  line-height: 1.1;
+}
+
+@media (max-width: 1020px) {
+  .top-nav {
+    grid-template-columns: 1fr;
+  }
+
+  .top-nav__links {
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+
+  .top-nav__tools {
+    justify-content: flex-start;
+  }
+
+  .search-box input {
+    width: min(100%, 26rem);
+  }
+}
+
+@media (max-width: 680px) {
+  .dashboard-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dashboard-header__actions,
+  .dashboard-header__actions .primary-button,
+  .dashboard-header__actions .ghost-button {
+    width: 100%;
+  }
+
+  .top-nav__tools {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .search-box input,
+  .top-nav__login {
+    width: 100%;
+  }
+}

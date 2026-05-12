@@ -1,8 +1,5 @@
-// P11 will replace this with the real dashboard redirect
+import { DashboardPage } from "@/components/DashboardPage";
+
 export default function Home() {
-  return (
-    <main className="flex min-h-screen items-center justify-center">
-      <p className="text-gray-500">InvoiceSaaS — P0 scaffold ✓</p>
-    </main>
-  );
+  return <DashboardPage />;
 }
