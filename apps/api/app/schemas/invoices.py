@@ -89,9 +89,12 @@ class UpdateInvoiceDraft(BaseModel):
         if self.line_items is not None and len(self.line_items) == 0:
             raise ValueError("line_items must not be empty when provided")
 
-        if self.issue_date is not None and self.due_date is not None:
-            if self.due_date < self.issue_date:
-                raise ValueError("due_date must be greater than or equal to issue_date")
+        if (
+            self.issue_date is not None
+            and self.due_date is not None
+            and self.due_date < self.issue_date
+        ):
+            raise ValueError("due_date must be greater than or equal to issue_date")
 
         return self
 
@@ -170,13 +173,19 @@ class InvoiceListFilters(BaseModel):
 
     @model_validator(mode="after")
     def _validate_date_ranges(self) -> Self:
-        if self.issue_date_from is not None and self.issue_date_to is not None:
-            if self.issue_date_from > self.issue_date_to:
-                raise ValueError("issue_date_from must be less than or equal to issue_date_to")
+        if (
+            self.issue_date_from is not None
+            and self.issue_date_to is not None
+            and self.issue_date_from > self.issue_date_to
+        ):
+            raise ValueError("issue_date_from must be less than or equal to issue_date_to")
 
-        if self.due_date_from is not None and self.due_date_to is not None:
-            if self.due_date_from > self.due_date_to:
-                raise ValueError("due_date_from must be less than or equal to due_date_to")
+        if (
+            self.due_date_from is not None
+            and self.due_date_to is not None
+            and self.due_date_from > self.due_date_to
+        ):
+            raise ValueError("due_date_from must be less than or equal to due_date_to")
 
         return self
 
