@@ -1,4 +1,11 @@
 import { AppShell } from "@/components/AppShell";
+import { CategoryCards } from "@/components/CategoryCards";
+import { InvoiceStatusMock } from "@/components/InvoiceStatusMock";
+import { QuickActions } from "@/components/QuickActions";
+import { RecentInvoices } from "@/components/RecentInvoices";
+import { RevenueChartMock } from "@/components/RevenueChartMock";
+import { StatCard } from "@/components/StatCard";
+import { summaryStats } from "@/lib/mockData";
 
 export function DashboardPage() {
   return (
@@ -19,14 +26,31 @@ export function DashboardPage() {
         </div>
       </section>
 
-      <section className="dashboard-empty card" aria-label="Dashboard preview">
-        <p className="eyebrow">Workspace shell</p>
-        <h2>Invoice and payment widgets are ready to drop in.</h2>
-        <p>
-          The navigation, dashboard frame, and responsive app surface are in
-          place for the mock data cards.
-        </p>
+      <section className="stats-grid" aria-label="Invoice summary">
+        {summaryStats.map((stat) => (
+          <StatCard
+            badge={stat.badge}
+            key={stat.title}
+            title={stat.title}
+            trend={stat.trend}
+            value={stat.value}
+            tone={stat.tone}
+          />
+        ))}
       </section>
+
+      <div className="dashboard-grid">
+        <div className="dashboard-main">
+          <InvoiceStatusMock />
+          <RecentInvoices />
+          <CategoryCards />
+        </div>
+
+        <aside className="dashboard-side" aria-label="Dashboard supporting widgets">
+          <RevenueChartMock />
+          <QuickActions />
+        </aside>
+      </div>
     </AppShell>
   );
 }
