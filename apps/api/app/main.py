@@ -5,6 +5,7 @@ from app.api.v1.auth import router as auth_router
 from app.api.v1.clients import router as clients_router
 from app.api.v1.expenses import router as expenses_router
 from app.api.v1.health import router as health_router
+from app.api.v1.invoices import router as invoices_router
 from app.api.v1.members import router as members_router
 from app.api.v1.org import router as org_router
 from app.api.v1.projects import router as projects_router
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
     app.include_router(clients_router, prefix="/api/v1")
     app.include_router(projects_router, prefix="/api/v1")
     app.include_router(expenses_router, prefix="/api/v1")
+    app.include_router(invoices_router, prefix="/api/v1")
 
     return app
 
