@@ -59,7 +59,7 @@ export function LoginPage() {
           <div className="login-card__header">
             <p className="eyebrow">Welcome back</p>
             <h2>Log in to Freelio</h2>
-            <p>Use the mock credentials below to view the dashboard prototype.</p>
+            <p>Manage invoices, payments, and client work from one calm place.</p>
           </div>
 
           <label className="field">
@@ -96,9 +96,7 @@ export function LoginPage() {
             Open dashboard
           </button>
 
-          <p className="demo-hint">
-            Demo only: no auth token is stored and no backend request is made.
-          </p>
+          <p className="demo-hint">Demo: demo@freelio.app / freelio-demo</p>
         </form>
       </section>
     </main>

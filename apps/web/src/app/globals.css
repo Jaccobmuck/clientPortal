@@ -33,6 +33,7 @@ html {
 body {
   min-height: 100vh;
   margin: 0;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(255, 255, 255, 0.78), transparent 34rem),
     linear-gradient(135deg, #e3f8eb 0%, #f6fff8 47%, #fffdf0 100%);
@@ -92,7 +93,7 @@ button {
   color: var(--primary-dark);
   font-size: 0.78rem;
   font-weight: 800;
-  letter-spacing: 0.1em;
+  letter-spacing: 0;
   text-transform: uppercase;
 }
 
@@ -174,7 +175,7 @@ button {
   max-width: 13ch;
   margin: 1rem 0;
   color: var(--text);
-  font-size: clamp(2.6rem, 6vw, 5.8rem);
+  font-size: 5rem;
   line-height: 0.92;
 }
 
@@ -218,7 +219,7 @@ button {
   display: grid;
   height: 8rem;
   grid-template-columns: repeat(7, minmax(0, 1fr));
-  align-items: end;
+  align-items: flex-end;
   gap: 0.55rem;
 }
 
@@ -275,7 +276,7 @@ button {
 .login-card__header h2 {
   margin: 0.4rem 0 0.5rem;
   color: var(--text);
-  font-size: clamp(1.8rem, 4vw, 2.55rem);
+  font-size: 2.35rem;
   line-height: 1;
 }
 
@@ -359,6 +360,10 @@ button {
   .login-copy {
     min-height: auto;
   }
+
+  .login-copy h1 {
+    font-size: 3.6rem;
+  }
 }
 
 @media (max-width: 560px) {
@@ -370,6 +375,10 @@ button {
   .login-copy h1 {
     max-width: 11ch;
     font-size: 2.75rem;
+  }
+
+  .login-card__header h2 {
+    font-size: 2rem;
   }
 
   .login-preview__header,
@@ -506,7 +515,7 @@ button {
 
 .dashboard-header h1 {
   margin: 0.45rem 0;
-  font-size: clamp(2.35rem, 5vw, 4.8rem);
+  font-size: 4.2rem;
   line-height: 0.92;
 }
 
@@ -535,8 +544,8 @@ button {
   }
 
   .top-nav__links {
+    flex-wrap: wrap;
     justify-content: flex-start;
-    overflow-x: auto;
     padding-bottom: 0.2rem;
   }
 
@@ -553,6 +562,10 @@ button {
   .dashboard-header {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .dashboard-header h1 {
+    font-size: 3rem;
   }
 
   .dashboard-header__actions,
@@ -734,7 +747,7 @@ button {
   display: grid;
   min-height: 17rem;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  align-items: end;
+  align-items: flex-end;
   gap: 0.75rem;
 }
 
@@ -756,7 +769,7 @@ button {
 .revenue-bars__track {
   display: flex;
   height: 12rem;
-  align-items: end;
+  align-items: flex-end;
   border-radius: 999px;
   background: #edf9f0;
   padding: 0.28rem;
@@ -943,7 +956,7 @@ button {
 .category-card {
   display: grid;
   min-height: 9.5rem;
-  align-content: end;
+  align-content: flex-end;
   gap: 0.35rem;
   border: 1px solid rgba(182, 230, 197, 0.66);
   border-radius: var(--radius-md);
