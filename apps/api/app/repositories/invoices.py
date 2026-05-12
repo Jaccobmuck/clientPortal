@@ -7,13 +7,12 @@ from uuid import UUID
 from postgrest import AsyncPostgrestClient
 from postgrest.exceptions import APIError
 
-from app.exceptions import InternalError, NotFoundError, ValidationError
+from app.exceptions import InternalError, NotFoundError
 from app.repositories._helpers import (
     basis_points_to_db,
     cents_to_db,
     db_to_basis_points,
     db_to_cents,
-    utc_now,
 )
 from app.schemas.invoices import InvoiceListItem, InvoiceResponse, LineItemResponse
 
