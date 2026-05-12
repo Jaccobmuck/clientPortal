@@ -1,5 +1,5 @@
 from collections.abc import AsyncIterator
-from typing import Annotated, cast
+from typing import Annotated, Any, cast
 from uuid import UUID
 
 from fastapi import Depends, Header
@@ -96,7 +96,7 @@ async def get_org_context(
 
         raise InternalError from exc
 
-    rows = cast("list[dict]", response.data or [])
+    rows = cast("list[dict[str, Any]]", response.data or [])
     if not rows:
         raise ForbiddenError(
             "not a member of this organization",

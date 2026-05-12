@@ -57,7 +57,8 @@ async def list_expenses(
     except APIError as exc:
         raise InternalError from exc
 
-    return [_row_to_response(row) for row in (response.data or [])]
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    return [_row_to_response(row) for row in rows]
 
 
 async def get_expense(

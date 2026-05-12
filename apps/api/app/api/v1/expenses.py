@@ -155,7 +155,7 @@ async def upload_receipt(
         {"content-type": file.content_type, "upsert": "true"},
     )
 
-    public_url = bucket.get_public_url(storage_path)
+    public_url = await bucket.get_public_url(storage_path)
 
     updated = await repo.update_receipt_url(
         db,
