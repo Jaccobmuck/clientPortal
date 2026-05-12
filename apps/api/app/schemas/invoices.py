@@ -114,12 +114,11 @@ class VoidInvoiceRequest(BaseModel):
 
 class LineItemResponse(BaseModel):
     id: UUID
-    invoice_id: UUID
     description: str
     quantity: str
-    unit_price: int
-    amount: int
-    sort_order: int
+    unit_price_cents: int
+    tax_rate_bp: int | None = None
+    line_total_cents: int
 
 
 class InvoiceResponse(BaseModel):
@@ -128,22 +127,58 @@ class InvoiceResponse(BaseModel):
     client_id: UUID
     project_id: UUID | None
     invoice_number: str
-    status: str
-    pay_token: UUID
+    status: InvoiceStatus
+    issue_date: date | None
     due_date: date | None
-    issued_at: datetime | None
-    sent_at: datetime | None
-    paid_at: datetime | None
-    voided_at: datetime | None
-    locked: bool
-    subtotal: int
-    tax_rate: int
-    tax_amount: int
-    total: int
-    notes: str | None
+    subtotal_cents: int
+    tax_cents: int
+    total_cents: int
+    memo: str | None = None
     line_items: list[LineItemResponse]
     created_at: datetime
     updated_at: datetime
+
+
+class InvoiceListItem(BaseModel):
+    id: UUID
+    client_id: UUID
+    invoice_number: str
+    status: InvoiceStatus
+    issue_date: date | None
+    due_date: date | None
+    total_cents: int
+    created_at: datetime
+
+
+class InvoiceListResponse(BaseModel):
+    items: list[InvoiceListItem]
+    limit: int = Field(gt=0)
+    offset: int = Field(ge=0)
+    total: int | None = Field(default=None, ge=0)
+
+
+class InvoiceListFilters(BaseModel):
+    status: InvoiceStatus | None = None
+    client_id: UUID | None = None
+    project_id: UUID | None = None
+    issue_date_from: date | None = None
+    issue_date_to: date | None = None
+    due_date_from: date | None = None
+    due_date_to: date | None = None
+    limit: int = Field(default=50, ge=1, le=100)
+    offset: int = Field(default=0, ge=0)
+
+    @model_validator(mode="after")
+    def _validate_date_ranges(self) -> Self:
+        if self.issue_date_from is not None and self.issue_date_to is not None:
+            if self.issue_date_from > self.issue_date_to:
+                raise ValueError("issue_date_from must be less than or equal to issue_date_to")
+
+        if self.due_date_from is not None and self.due_date_to is not None:
+            if self.due_date_from > self.due_date_to:
+                raise ValueError("due_date_from must be less than or equal to due_date_to")
+
+        return self
 
 
 # ---------------------------------------------------------------------------
