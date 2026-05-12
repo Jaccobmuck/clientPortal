@@ -411,5 +411,41 @@ async def update_invoice(
     if not rows:
         return None
 
-    items = await list_line_items(client, invoice_id=invoice_id)
-    return _row_to_response(rows[0], items)
+    items_updated = await list_line_items(client, invoice_id=invoice_id)
+    return _row_to_response(rows[0], items_updated)
+
+
+async def send_invoice(
+    client: AsyncPostgrestClient,
+    *,
+    org_id: UUID,
+    invoice_id: UUID,
+    sent_at: str,
+    pay_token: UUID | None = None,
+) -> InvoiceResponse | None:
+    payload: dict[str, Any] = {
+        "status": "sent",
+        "sent_at": sent_at,
+        "locked": True,
+    }
+    if pay_token is not None:
+        payload["pay_token"] = str(pay_token)
+
+    try:
+        response = (
+            await client.from_("invoices")
+            .update(payload)
+            .eq("id", str(invoice_id))
+            .eq("org_id", str(org_id))
+            .select(_INVOICE_COLUMNS)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    if not rows:
+        return None
+
+    send_items = await list_line_items(client, invoice_id=invoice_id)
+    return _row_to_response(rows[0], send_items)

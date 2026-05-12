@@ -1,10 +1,11 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Query
 
 from app.core.deps import OrgUser, SupabaseDep
-from app.exceptions import NotFoundError
+from app.exceptions import ConflictError, NotFoundError, ValidationError
 from app.repositories import invoices as repo
+from app.repositories._helpers import utc_now
 from app.schemas.base import BaseResponse
 from app.schemas.invoices import (
     CreateInvoiceRequest,
@@ -12,6 +13,8 @@ from app.schemas.invoices import (
     InvoiceStatus,
     UpdateInvoiceRequest,
 )
+from app.utils.queues import enqueue_email, enqueue_pdf
+from app.utils.status_machine import assert_transition
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -77,3 +80,38 @@ async def update_invoice(
     if invoice is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
     return BaseResponse(success=True, data=invoice)
+
+
+@router.post("/{invoice_id}/send")
+async def send_invoice(
+    invoice_id: UUID,
+    ctx: OrgUser,
+    db: SupabaseDep,
+) -> BaseResponse[InvoiceResponse]:
+    invoice = await repo.get_invoice(db, org_id=ctx.org_id, invoice_id=invoice_id)
+    if invoice is None:
+        raise NotFoundError("invoice not found", code="invoice_not_found")
+
+    if invoice.locked:
+        raise ConflictError("invoice is already locked", code="invoice_locked")
+
+    line_items = await repo.list_line_items(db, invoice_id=invoice_id)
+    if not line_items:
+        raise ValidationError("invoice has no line items", code="no_line_items")
+
+    assert_transition(invoice.status, "sent")
+
+    pay_token = uuid4() if invoice.pay_token is None else None
+
+    updated = await repo.send_invoice(
+        db,
+        org_id=ctx.org_id,
+        invoice_id=invoice_id,
+        sent_at=utc_now(),
+        pay_token=pay_token,
+    )
+
+    await enqueue_pdf(db, invoice_id=invoice_id, org_id=ctx.org_id)
+    await enqueue_email(db, invoice_id=invoice_id, org_id=ctx.org_id)
+
+    return BaseResponse(success=True, data=updated)
