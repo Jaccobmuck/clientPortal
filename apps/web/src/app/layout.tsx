@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "InvoiceSaaS",
-  description: "Invoicing for freelancers",
+  title: "Freelio",
+  description: "Simple invoicing for freelancers",
 };
 
 export default function RootLayout({
