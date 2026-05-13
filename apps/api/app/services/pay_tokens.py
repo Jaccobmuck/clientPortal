@@ -42,9 +42,7 @@ async def rotate_invoice_pay_token(
 async def invalidate_invoice_pay_token(
     db: AsyncPostgrestClient, *, org_id: UUID, invoice_id: UUID
 ) -> UUID:
-    pay_token = await invoice_repo.invalidate_pay_token(
-        db, org_id=org_id, invoice_id=invoice_id
-    )
+    pay_token = await invoice_repo.invalidate_pay_token(db, org_id=org_id, invoice_id=invoice_id)
     if pay_token is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
     return pay_token

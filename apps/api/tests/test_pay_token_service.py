@@ -79,9 +79,7 @@ class FakeSupabaseClient:
     def __init__(self, invoice_rows: list[dict[str, Any]]) -> None:
         self.tables: dict[str, list[dict[str, Any]]] = {
             "invoices": invoice_rows,
-            "invoice_line_items": [
-                _line_item_row(UUID(str(row["id"]))) for row in invoice_rows
-            ],
+            "invoice_line_items": [_line_item_row(UUID(str(row["id"]))) for row in invoice_rows],
         }
 
     def from_(self, table: str) -> FakeQuery:
