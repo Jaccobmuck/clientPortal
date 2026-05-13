@@ -70,9 +70,7 @@ async def get_invoice(
     ctx: OrgUser,
     db: SupabaseDep,
 ) -> BaseResponse[InvoiceResponse]:
-    invoice = await repo.get_invoice(db, org_id=ctx.org_id, invoice_id=invoice_id)
-    if invoice is None:
-        raise NotFoundError("invoice not found", code="invoice_not_found")
+    invoice = await invoice_service.get_invoice_detail(db, org_id=ctx.org_id, invoice_id=invoice_id)
     return BaseResponse(success=True, data=invoice)
 
 
@@ -83,15 +81,12 @@ async def update_invoice(
     ctx: OrgUser,
     db: SupabaseDep,
 ) -> BaseResponse[InvoiceResponse]:
-    fields = body.model_dump(exclude_unset=True)
-    invoice = await repo.update_invoice(
+    invoice = await invoice_service.update_draft_invoice(
         db,
         org_id=ctx.org_id,
         invoice_id=invoice_id,
-        data=fields,
+        payload=body,
     )
-    if invoice is None:
-        raise NotFoundError("invoice not found", code="invoice_not_found")
     return BaseResponse(success=True, data=invoice)
 
 
