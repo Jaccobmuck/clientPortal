@@ -63,8 +63,7 @@ def test_terminal_invoice_statuses_have_no_outgoing_transitions(
     terminal_status: InvoiceStatus,
 ) -> None:
     assert all(
-        not can_transition(terminal_status, target_status)
-        for target_status in InvoiceStatus
+        not can_transition(terminal_status, target_status) for target_status in InvoiceStatus
     )
 
 
