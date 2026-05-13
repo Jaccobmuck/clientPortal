@@ -9,9 +9,10 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 class InvoiceStatus(StrEnum):
     DRAFT = "draft"
     SENT = "sent"
+    LOCKED = "locked"
+    PAID = "paid"
     DISPUTED = "disputed"
     RESOLVED = "resolved"
-    PAID = "paid"
     VOID = "void"
     OVERDUE = "overdue"
 
