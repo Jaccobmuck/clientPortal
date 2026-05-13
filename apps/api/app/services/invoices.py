@@ -2,16 +2,16 @@ from uuid import UUID
 
 from postgrest import AsyncPostgrestClient
 
-from app.exceptions import ConflictError, NotFoundError, ValidationError
+from app.exceptions import NotFoundError, ValidationError
 from app.repositories import invoices as repo
 from app.schemas.invoices import (
     CreateInvoice,
     InvoiceListFilters,
     InvoiceListResponse,
     InvoiceResponse,
-    InvoiceStatus,
     UpdateInvoiceDraft,
 )
+from app.utils.status_machine import assert_invoice_editable
 
 
 async def create_invoice(
@@ -93,8 +93,7 @@ async def update_draft_invoice(
     if existing is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
 
-    if existing.status != InvoiceStatus.DRAFT:
-        raise ConflictError("only draft invoices can be edited", code="invoice_locked")
+    assert_invoice_editable(existing.status)
 
     fields = payload.model_dump(exclude_unset=True)
 
