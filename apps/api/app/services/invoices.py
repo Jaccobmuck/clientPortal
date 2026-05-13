@@ -15,6 +15,7 @@ from app.schemas.invoices import (
     InvoiceStatus,
     UpdateInvoiceDraft,
 )
+from app.utils.queues import enqueue_email, enqueue_pdf
 from app.utils.status_machine import assert_invoice_editable, assert_transition
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -205,4 +206,8 @@ async def send_invoice(
     )
     if updated is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
+
+    await enqueue_pdf(db, invoice_id=invoice_id, org_id=org_id)
+    await enqueue_email(db, invoice_id=invoice_id, org_id=org_id)
+
     return updated
