@@ -31,25 +31,33 @@ async def list_invoices(
     org_id: UUID,
     filters: InvoiceListFilters,
 ) -> InvoiceListResponse:
-    filter_kwargs = {
-        "client_id": filters.client_id,
-        "project_id": filters.project_id,
-        "status": filters.status.value if filters.status else None,
-        "issue_date_from": filters.issue_date_from,
-        "issue_date_to": filters.issue_date_to,
-        "due_date_from": filters.due_date_from,
-        "due_date_to": filters.due_date_to,
-    }
+    status_value = filters.status.value if filters.status else None
 
     items = await repo.list_invoices(
         db,
         org_id=org_id,
         limit=filters.limit,
         offset=filters.offset,
-        **filter_kwargs,
+        client_id=filters.client_id,
+        project_id=filters.project_id,
+        status=status_value,
+        issue_date_from=filters.issue_date_from,
+        issue_date_to=filters.issue_date_to,
+        due_date_from=filters.due_date_from,
+        due_date_to=filters.due_date_to,
     )
 
-    total = await repo.count_invoices(db, org_id=org_id, **filter_kwargs)
+    total = await repo.count_invoices(
+        db,
+        org_id=org_id,
+        client_id=filters.client_id,
+        project_id=filters.project_id,
+        status=status_value,
+        issue_date_from=filters.issue_date_from,
+        issue_date_to=filters.issue_date_to,
+        due_date_from=filters.due_date_from,
+        due_date_to=filters.due_date_to,
+    )
 
     return InvoiceListResponse(
         items=items,

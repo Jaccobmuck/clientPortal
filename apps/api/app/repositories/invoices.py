@@ -6,6 +6,7 @@ from uuid import UUID
 
 from postgrest import AsyncPostgrestClient
 from postgrest.exceptions import APIError
+from postgrest.types import CountMethod
 
 from app.exceptions import InternalError, NotFoundError
 from app.repositories._helpers import (
@@ -26,9 +27,7 @@ _LINE_ITEM_COLUMNS = "id, invoice_id, description, quantity, unit_price, amount,
 
 _MAX_INVOICE_NUMBER_RETRIES = 3
 
-_LIST_COLUMNS = (
-    "id, client_id, invoice_number, status, issued_at, due_date, total, created_at"
-)
+_LIST_COLUMNS = "id, client_id, invoice_number, status, issued_at, due_date, total, created_at"
 
 
 def _row_to_line_item(row: dict[str, Any]) -> LineItemResponse:
@@ -185,12 +184,7 @@ async def insert_invoice(
     payload: dict[str, Any],
 ) -> dict[str, Any]:
     try:
-        response = (
-            await client.from_("invoices")
-            .insert(payload)
-            .select(_INVOICE_COLUMNS)
-            .execute()
-        )
+        response = await client.from_("invoices").insert(payload).select(_INVOICE_COLUMNS).execute()
     except APIError as exc:
         raise InternalError from exc
 
@@ -332,9 +326,7 @@ async def count_invoices(
 ) -> int:
     try:
         query = (
-            client.from_("invoices")
-            .select("id", count="exact")
-            .eq("org_id", str(org_id))
+            client.from_("invoices").select("id", count=CountMethod.exact).eq("org_id", str(org_id))
         )
         if client_id is not None:
             query = query.eq("client_id", str(client_id))
