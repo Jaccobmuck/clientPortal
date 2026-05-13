@@ -1,16 +1,18 @@
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 from uuid import UUID, uuid4
 
 import pytest
-from postgrest import AsyncPostgrestClient
 
 from app.exceptions import NotFoundError
 from app.repositories import invoices as invoice_repo
 from app.schemas.invoices import InvoiceStatus
 from app.services import pay_tokens as pay_token_service
+
+if TYPE_CHECKING:
+    from postgrest import AsyncPostgrestClient
 
 pytestmark = pytest.mark.anyio
 
@@ -153,7 +155,7 @@ def _db_with_invoice(status: InvoiceStatus) -> tuple[FakeSupabaseClient, dict[st
 
 
 def _as_supabase(db: FakeSupabaseClient) -> AsyncPostgrestClient:
-    return cast(AsyncPostgrestClient, db)
+    return cast("AsyncPostgrestClient", db)
 
 
 async def test_lookup_valid_sent_invoice_by_token_succeeds() -> None:
