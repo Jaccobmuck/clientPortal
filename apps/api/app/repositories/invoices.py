@@ -350,6 +350,80 @@ async def count_invoices(
 
 
 # ---------------------------------------------------------------------------
+# Detail & draft-update operations
+# ---------------------------------------------------------------------------
+
+
+async def delete_invoice_line_items(
+    client: AsyncPostgrestClient,
+    *,
+    invoice_id: UUID,
+) -> None:
+    try:
+        await (
+            client.from_("invoice_line_items").delete().eq("invoice_id", str(invoice_id)).execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+
+async def update_invoice_fields(
+    client: AsyncPostgrestClient,
+    *,
+    org_id: UUID,
+    invoice_id: UUID,
+    payload: dict[str, Any],
+) -> InvoiceResponse | None:
+    if not payload:
+        return await get_invoice(client, org_id=org_id, invoice_id=invoice_id)
+
+    try:
+        response = (
+            await client.from_("invoices")
+            .update(payload)
+            .eq("id", str(invoice_id))
+            .eq("org_id", str(org_id))
+            .select(_INVOICE_COLUMNS)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    if not rows:
+        return None
+
+    items = await list_line_items(client, invoice_id=invoice_id)
+    return _row_to_response(rows[0], items)
+
+
+async def update_invoice_totals(
+    client: AsyncPostgrestClient,
+    *,
+    org_id: UUID,
+    invoice_id: UUID,
+    subtotal_cents: int,
+    tax_cents: int,
+    total_cents: int,
+) -> None:
+    payload = {
+        "subtotal": cents_to_db(subtotal_cents),
+        "tax_amount": cents_to_db(tax_cents),
+        "total": cents_to_db(total_cents),
+    }
+    try:
+        await (
+            client.from_("invoices")
+            .update(payload)
+            .eq("id", str(invoice_id))
+            .eq("org_id", str(org_id))
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+
+# ---------------------------------------------------------------------------
 # Legacy helpers kept for existing update/send/void flows
 # ---------------------------------------------------------------------------
 
