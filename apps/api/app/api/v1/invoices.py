@@ -1,19 +1,23 @@
+from datetime import date
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, Query
 
 from app.core.deps import OrgUser, SupabaseDep
-from app.exceptions import ConflictError, NotFoundError, ValidationError
+from app.exceptions import NotFoundError
 from app.repositories import invoices as repo
 from app.repositories._helpers import utc_now
 from app.schemas.base import BaseResponse
 from app.schemas.invoices import (
-    CreateInvoiceRequest,
+    CreateInvoice,
+    InvoiceListFilters,
+    InvoiceListResponse,
     InvoiceResponse,
     InvoiceStatus,
-    UpdateInvoiceRequest,
+    UpdateInvoiceDraft,
     VoidInvoiceRequest,
 )
+from app.services import invoices as invoice_service
 from app.utils.notification_log import write_audit
 from app.utils.queues import enqueue_email, enqueue_pdf
 from app.utils.status_machine import assert_transition
@@ -23,12 +27,11 @@ router = APIRouter(prefix="/invoices", tags=["invoices"])
 
 @router.post("/")
 async def create_invoice(
-    body: CreateInvoiceRequest,
+    body: CreateInvoice,
     ctx: OrgUser,
     db: SupabaseDep,
 ) -> BaseResponse[InvoiceResponse]:
-    data = body.model_dump()
-    invoice = await repo.create_invoice(db, org_id=ctx.org_id, data=data)
+    invoice = await invoice_service.create_invoice(db, org_id=ctx.org_id, payload=body)
     return BaseResponse(success=True, data=invoice)
 
 
@@ -36,21 +39,29 @@ async def create_invoice(
 async def list_invoices(
     ctx: OrgUser,
     db: SupabaseDep,
-    client_id: UUID | None = None,
     status: InvoiceStatus | None = None,
+    client_id: UUID | None = None,
+    project_id: UUID | None = None,
+    issue_date_from: date | None = None,
+    issue_date_to: date | None = None,
+    due_date_from: date | None = None,
+    due_date_to: date | None = None,
     limit: int = Query(default=50, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
-) -> BaseResponse[list[InvoiceResponse]]:
-    clamped_limit = min(limit, 100)
-    invoices = await repo.list_invoices(
-        db,
-        org_id=ctx.org_id,
+) -> BaseResponse[InvoiceListResponse]:
+    filters = InvoiceListFilters(
+        status=status,
         client_id=client_id,
-        status=status.value if status else None,
-        limit=clamped_limit,
+        project_id=project_id,
+        issue_date_from=issue_date_from,
+        issue_date_to=issue_date_to,
+        due_date_from=due_date_from,
+        due_date_to=due_date_to,
+        limit=limit,
         offset=offset,
     )
-    return BaseResponse(success=True, data=invoices)
+    result = await invoice_service.list_invoices(db, org_id=ctx.org_id, filters=filters)
+    return BaseResponse(success=True, data=result)
 
 
 @router.get("/{invoice_id}")
@@ -68,7 +79,7 @@ async def get_invoice(
 @router.patch("/{invoice_id}")
 async def update_invoice(
     invoice_id: UUID,
-    body: UpdateInvoiceRequest,
+    body: UpdateInvoiceDraft,
     ctx: OrgUser,
     db: SupabaseDep,
 ) -> BaseResponse[InvoiceResponse]:
@@ -95,10 +106,14 @@ async def send_invoice(
         raise NotFoundError("invoice not found", code="invoice_not_found")
 
     if invoice.status != InvoiceStatus.DRAFT:
+        from app.exceptions import ConflictError
+
         raise ConflictError("invoice is already locked", code="invoice_locked")
 
     line_items = await repo.list_line_items(db, invoice_id=invoice_id)
     if not line_items:
+        from app.exceptions import ValidationError
+
         raise ValidationError("invoice has no line items", code="no_line_items")
 
     assert_transition(invoice.status, "sent")
