@@ -16,9 +16,6 @@ ALLOWED_TRANSITIONS: dict[InvoiceStatus, frozenset[InvoiceStatus]] = {
     InvoiceStatus.RESOLVED: frozenset({InvoiceStatus.PAID, InvoiceStatus.VOID}),
     InvoiceStatus.PAID: frozenset(),
     InvoiceStatus.VOID: frozenset(),
-    # Preserved for import/filter compatibility with existing data. New lifecycle
-    # transitions intentionally do not route through overdue.
-    InvoiceStatus.OVERDUE: frozenset(),
 }
 
 VALID_TRANSITIONS: dict[str, list[str]] = {
