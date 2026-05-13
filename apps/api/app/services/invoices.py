@@ -1,17 +1,23 @@
+import re
 from uuid import UUID
 
 from postgrest import AsyncPostgrestClient
 
-from app.exceptions import NotFoundError, ValidationError
+from app.exceptions import ConflictError, NotFoundError, ValidationError
+from app.repositories import clients as clients_repo
 from app.repositories import invoices as repo
+from app.repositories._helpers import utc_now
 from app.schemas.invoices import (
     CreateInvoice,
     InvoiceListFilters,
     InvoiceListResponse,
     InvoiceResponse,
+    InvoiceStatus,
     UpdateInvoiceDraft,
 )
-from app.utils.status_machine import assert_invoice_editable
+from app.utils.status_machine import assert_invoice_editable, assert_transition
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 async def create_invoice(
@@ -150,3 +156,53 @@ async def update_draft_invoice(
     if result is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
     return result
+
+
+async def send_invoice(
+    db: AsyncPostgrestClient,
+    *,
+    org_id: UUID,
+    invoice_id: UUID,
+) -> InvoiceResponse:
+    invoice = await repo.get_invoice(db, org_id=org_id, invoice_id=invoice_id)
+    if invoice is None:
+        raise NotFoundError("invoice not found", code="invoice_not_found")
+
+    if invoice.status == InvoiceStatus.SENT:
+        return invoice
+
+    if invoice.status != InvoiceStatus.DRAFT:
+        raise ConflictError(
+            f"cannot send invoice with status '{invoice.status}'",
+            code="invalid_status_transition",
+        )
+
+    if not invoice.line_items:
+        raise ConflictError("invoice has no line items", code="no_line_items")
+
+    if invoice.total_cents <= 0:
+        raise ConflictError(
+            "invoice total must be greater than zero",
+            code="invalid_total",
+        )
+
+    client = await clients_repo.get_client(db, org_id=org_id, client_id=invoice.client_id)
+    if client is None:
+        raise NotFoundError("client not found", code="client_not_found")
+    if not client.email or not _EMAIL_RE.match(client.email):
+        raise ValidationError(
+            "client must have a valid email address",
+            code="invalid_client_email",
+        )
+
+    assert_transition(invoice.status, InvoiceStatus.SENT)
+
+    updated = await repo.send_invoice(
+        db,
+        org_id=org_id,
+        invoice_id=invoice_id,
+        sent_at=utc_now(),
+    )
+    if updated is None:
+        raise NotFoundError("invoice not found", code="invoice_not_found")
+    return updated
