@@ -1,4 +1,3 @@
-import secrets
 from datetime import date
 from decimal import Decimal
 from typing import Any, cast
@@ -16,6 +15,7 @@ from app.repositories._helpers import (
     db_to_cents,
 )
 from app.schemas.invoices import InvoiceListItem, InvoiceResponse, LineItemResponse
+from app.utils.pay_tokens import generate_pay_token
 
 _INVOICE_COLUMNS = (
     "id, org_id, client_id, project_id, invoice_number, status, "
@@ -28,6 +28,8 @@ _LINE_ITEM_COLUMNS = "id, invoice_id, description, quantity, unit_price, amount,
 _MAX_INVOICE_NUMBER_RETRIES = 3
 
 _LIST_COLUMNS = "id, client_id, invoice_number, status, issued_at, due_date, total, created_at"
+
+PAY_TOKEN_NULLABLE = False
 
 
 def _row_to_line_item(row: dict[str, Any]) -> LineItemResponse:
@@ -95,10 +97,6 @@ def compute_line_totals(
             tax_cents += line_subtotal * bp // 10000
 
     return subtotal_cents, tax_cents, subtotal_cents + tax_cents
-
-
-def generate_pay_token() -> str:
-    return secrets.token_urlsafe(32)
 
 
 async def next_invoice_number(client: AsyncPostgrestClient, *, org_id: UUID) -> str:
@@ -271,6 +269,57 @@ async def get_invoice(
 
     items = await list_line_items(client, invoice_id=invoice_id)
     return _row_to_response(rows[0], items)
+
+
+async def get_invoice_by_pay_token(
+    client: AsyncPostgrestClient, *, pay_token: UUID
+) -> InvoiceResponse | None:
+    try:
+        response = (
+            await client.from_("invoices")
+            .select(_INVOICE_COLUMNS)
+            .eq("pay_token", str(pay_token))
+            .limit(1)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    if not rows:
+        return None
+
+    invoice_id = UUID(str(rows[0]["id"]))
+    items = await list_line_items(client, invoice_id=invoice_id)
+    return _row_to_response(rows[0], items)
+
+
+async def rotate_invoice_pay_token(
+    client: AsyncPostgrestClient, *, org_id: UUID, invoice_id: UUID
+) -> UUID | None:
+    pay_token = generate_pay_token()
+    try:
+        response = (
+            await client.from_("invoices")
+            .update({"pay_token": str(pay_token)})
+            .eq("id", str(invoice_id))
+            .eq("org_id", str(org_id))
+            .select("pay_token")
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    if not rows:
+        return None
+    return UUID(str(rows[0]["pay_token"]))
+
+
+async def invalidate_pay_token(
+    client: AsyncPostgrestClient, *, org_id: UUID, invoice_id: UUID
+) -> UUID | None:
+    return await rotate_invoice_pay_token(client, org_id=org_id, invoice_id=invoice_id)
 
 
 async def list_invoices(
@@ -495,7 +544,7 @@ async def create_invoice(
             "tax_rate": basis_points_to_db(0),
             "tax_amount": cents_to_db(tax_amount),
             "total": cents_to_db(total),
-            "pay_token": generate_pay_token(),
+            "pay_token": str(generate_pay_token()),
         }
         if project_id is not None:
             payload["project_id"] = str(project_id)
