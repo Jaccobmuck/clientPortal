@@ -996,6 +996,173 @@ button {
   background: var(--accent-soft);
 }
 
+.smoke-page {
+  min-height: 100vh;
+  padding: clamp(0.9rem, 2vw, 1.6rem);
+}
+
+.smoke-shell {
+  min-height: calc(100vh - clamp(1.8rem, 4vw, 3.2rem));
+  border: 1px solid rgba(182, 230, 197, 0.82);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.72), rgba(245, 255, 247, 0.88)),
+    var(--bg-soft);
+  box-shadow: var(--shadow-soft);
+  padding: clamp(1rem, 3vw, 2rem);
+}
+
+.smoke-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.smoke-header h1 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
+  line-height: 0.95;
+}
+
+.smoke-state,
+.smoke-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: var(--surface-mint);
+  color: var(--primary-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+  padding: 0.45rem 0.7rem;
+  white-space: nowrap;
+}
+
+.smoke-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.smoke-card {
+  display: grid;
+  min-height: 15rem;
+  align-content: space-between;
+  gap: 1.25rem;
+  padding: 1.1rem;
+}
+
+.smoke-card--wide {
+  grid-column: 1 / -1;
+  min-height: auto;
+}
+
+.smoke-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.smoke-card__header > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.smoke-card__icon {
+  display: grid;
+  width: 2.7rem;
+  height: 2.7rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.9rem;
+  background: var(--surface-mint);
+  color: var(--primary-dark);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.smoke-card h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  line-height: 1.15;
+}
+
+.smoke-card__message,
+.smoke-error {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.smoke-error,
+.smoke-warn {
+  color: #9b3b08;
+}
+
+.smoke-ok {
+  color: var(--primary-dark);
+}
+
+.smoke-pill--ok {
+  background: #dcf8e4;
+  color: #1d6b42;
+}
+
+.smoke-pill--warn {
+  background: var(--accent-soft);
+  color: #9b3b08;
+}
+
+.smoke-config-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.smoke-config-list div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid rgba(182, 230, 197, 0.66);
+  border-radius: 1rem;
+  background: var(--bg-soft);
+  padding: 0.85rem;
+}
+
+.smoke-config-list dt,
+.smoke-config-list dd {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 850;
+}
+
+.smoke-config-list dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.smoke-config-list dd {
+  flex: 0 0 auto;
+}
+
+.smoke-action {
+  width: 100%;
+}
+
+.smoke-action:disabled {
+  cursor: wait;
+  opacity: 0.62;
+  transform: none;
+}
+
 @media (max-width: 1180px) {
   .stats-grid,
   .status-grid,
@@ -1012,6 +1179,17 @@ button {
   .stats-grid,
   .status-grid,
   .category-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .smoke-header,
+  .smoke-card__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .smoke-grid,
+  .smoke-config-list {
     grid-template-columns: 1fr;
   }
 
