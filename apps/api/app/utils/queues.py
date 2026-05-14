@@ -15,7 +15,7 @@ This module writes to the job_outbox Postgres table only.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from postgrest.exceptions import APIError
 
@@ -93,7 +93,7 @@ async def find_existing_job(
     except APIError as exc:
         raise InternalError from exc
 
-    rows: list[dict[str, Any]] = response.data or []
+    rows = cast("list[dict[str, Any]]", response.data or [])
     return rows[0] if rows else None
 
 
@@ -117,7 +117,7 @@ async def ensure_job(
         job_id=job_id,
     )
     if existing is not None:
-        return existing["status"]
+        return str(existing["status"])
 
     try:
         await (
