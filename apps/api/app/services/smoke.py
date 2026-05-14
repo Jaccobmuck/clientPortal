@@ -39,13 +39,14 @@ async def send_smoke_notification(
         code="smoke_email_not_configured",
     )
 
+    result_line = f"Result: {status_message}"
+    text = f"The Freelio smoke endpoint '{action}' returned OK.\n\n{result_line}"
+
     payload = {
         "from": from_email,
         "to": [recipient],
         "subject": f"Freelio smoke OK: {action}",
-        "text": (
-            f"The Freelio smoke endpoint '{action}' returned OK.\n\n" f"Result: {status_message}"
-        ),
+        "text": text,
     }
     headers = {"Authorization": f"Bearer {api_key}"}
 
