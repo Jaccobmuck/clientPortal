@@ -22,15 +22,24 @@ type SmokeConfig = {
   enabled: boolean;
   all_required_present: boolean;
   required: ConfigCheck[];
+  smoke: ConfigCheck[];
 };
 
-type SmokeActionName = "queue" | "email" | "pdf" | "reminder";
+type SmokeActionName = "queue" | "email" | "pdf" | "reminder" | "stripe";
+
+type SmokeNotification = {
+  provider: "resend";
+  sent: boolean;
+  recipient: string;
+  message_id?: string | null;
+};
 
 type SmokeActionResult = {
   action: SmokeActionName;
-  status: "placeholder";
+  status: "ok" | "placeholder";
   implemented: boolean;
   message: string;
+  notification: SmokeNotification;
 };
 
 const actionCards: Array<{
@@ -42,6 +51,7 @@ const actionCards: Array<{
   { action: "email", title: "Email test", label: "Run email check" },
   { action: "pdf", title: "PDF render/upload test", label: "Run PDF check" },
   { action: "reminder", title: "Delayed reminder test", label: "Run reminder check" },
+  { action: "stripe", title: "Stripe API test", label: "Run Stripe check" },
 ];
 
 function statusText(check?: ConfigCheck) {
@@ -49,6 +59,19 @@ function statusText(check?: ConfigCheck) {
     return "Unknown";
   }
   return check.present ? "Present" : "Missing";
+}
+
+function defaultActionMessage(action: SmokeActionName, redisReady?: boolean) {
+  if (action === "stripe") {
+    return "Checks Stripe credentials only. No payment objects are created.";
+  }
+  if (action === "email") {
+    return "Sends a Resend smoke email to the configured recipient.";
+  }
+  if (action === "queue" && redisReady === false) {
+    return "Redis config is not present.";
+  }
+  return "Ready to call the smoke endpoint.";
 }
 
 async function readApiResponse<T>(response: Response): Promise<T> {
@@ -99,7 +122,9 @@ export function SmokePage() {
   }, []);
 
   const configByName = useMemo(() => {
-    return new Map(config?.required.map((check) => [check.name, check]) ?? []);
+    return new Map(
+      [...(config?.required ?? []), ...(config?.smoke ?? [])].map((check) => [check.name, check]),
+    );
   }, [config]);
 
   async function runAction(action: SmokeActionName) {
@@ -118,6 +143,11 @@ export function SmokePage() {
           status: "placeholder",
           implemented: false,
           message: error instanceof Error ? error.message : "Smoke action unavailable",
+          notification: {
+            provider: "resend",
+            sent: false,
+            recipient: "",
+          },
         },
       }));
     } finally {
@@ -161,7 +191,7 @@ export function SmokePage() {
             {configError ? <p className="smoke-error">{configError}</p> : null}
 
             <dl className="smoke-config-list">
-              {(config?.required ?? []).map((check) => (
+              {[...(config?.required ?? []), ...(config?.smoke ?? [])].map((check) => (
                 <div key={check.name}>
                   <dt>{check.name}</dt>
                   <dd className={check.present ? "smoke-ok" : "smoke-warn"}>
@@ -193,14 +223,19 @@ export function SmokePage() {
                     <span className="smoke-card__icon">{card.action.slice(0, 3).toUpperCase()}</span>
                     <h2>{card.title}</h2>
                   </div>
-                  <span className="smoke-pill">Placeholder</span>
+                  <span className="smoke-pill">
+                    {result?.status === "ok" ? "OK" : "Placeholder"}
+                  </span>
                 </div>
 
                 <p className="smoke-card__message">
-                  {result?.message ??
-                    (card.action === "queue" && redisReady === false
-                      ? "Redis config is not present."
-                      : "Ready to call the smoke endpoint.")}
+                  {result
+                    ? `${result.message} ${
+                        result.notification.sent
+                          ? `Notification sent to ${result.notification.recipient}.`
+                          : "Notification was not sent."
+                      }`
+                    : defaultActionMessage(card.action, redisReady)}
                 </p>
 
                 <button

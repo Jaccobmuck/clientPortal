@@ -2,7 +2,13 @@ from fastapi import APIRouter, HTTPException
 
 from app.core.settings import settings
 from app.schemas.base import BaseResponse
-from app.schemas.smoke import SmokeActionName, SmokeActionStatus, SmokeConfigStatus
+from app.schemas.smoke import (
+    SmokeActionName,
+    SmokeActionState,
+    SmokeActionStatus,
+    SmokeConfigStatus,
+)
+from app.services.smoke import check_stripe_credentials, send_smoke_notification
 
 router = APIRouter(prefix="/smoke", tags=["smoke"])
 
@@ -12,15 +18,23 @@ def _require_smoke_tests_enabled() -> None:
         raise HTTPException(status_code=404, detail="Not found")
 
 
-def _placeholder(action: SmokeActionName, message: str) -> BaseResponse[SmokeActionStatus]:
+async def _action_response(
+    *,
+    action: SmokeActionName,
+    state: SmokeActionState,
+    implemented: bool,
+    message: str,
+) -> BaseResponse[SmokeActionStatus]:
     _require_smoke_tests_enabled()
+    notification = await send_smoke_notification(action=action, status_message=message)
     return BaseResponse[SmokeActionStatus](
         success=True,
         data=SmokeActionStatus(
             action=action,
-            status="placeholder",
-            implemented=False,
+            status=state,
+            implemented=implemented,
             message=message,
+            notification=notification,
         ),
     )
 
@@ -34,37 +48,58 @@ async def get_smoke_config() -> BaseResponse[SmokeConfigStatus]:
             enabled=settings.ENABLE_SMOKE_TESTS,
             all_required_present=settings.required_config_ready(),
             required=settings.required_config_presence(),
+            smoke=settings.smoke_config_presence(),
         ),
     )
 
 
 @router.post("/queue")
 async def smoke_queue() -> BaseResponse[SmokeActionStatus]:
-    return _placeholder(
-        "queue",
-        "Queue smoke action is a placeholder until worker processors are implemented.",
+    return await _action_response(
+        action="queue",
+        state="placeholder",
+        implemented=False,
+        message="Queue smoke action is a placeholder until worker processors are implemented.",
     )
 
 
 @router.post("/email")
 async def smoke_email() -> BaseResponse[SmokeActionStatus]:
-    return _placeholder(
-        "email",
-        "Email smoke action is a placeholder and does not send email.",
+    return await _action_response(
+        action="email",
+        state="ok",
+        implemented=True,
+        message="Resend smoke email was accepted by the provider.",
     )
 
 
 @router.post("/pdf")
 async def smoke_pdf() -> BaseResponse[SmokeActionStatus]:
-    return _placeholder(
-        "pdf",
-        "PDF smoke action is a placeholder and does not render or upload files.",
+    return await _action_response(
+        action="pdf",
+        state="placeholder",
+        implemented=False,
+        message="PDF smoke action is a placeholder and does not render or upload files.",
     )
 
 
 @router.post("/reminder")
 async def smoke_reminder() -> BaseResponse[SmokeActionStatus]:
-    return _placeholder(
-        "reminder",
-        "Delayed reminder smoke action is a placeholder and does not enqueue jobs.",
+    return await _action_response(
+        action="reminder",
+        state="placeholder",
+        implemented=False,
+        message="Delayed reminder smoke action is a placeholder and does not enqueue jobs.",
+    )
+
+
+@router.post("/stripe")
+async def smoke_stripe() -> BaseResponse[SmokeActionStatus]:
+    _require_smoke_tests_enabled()
+    await check_stripe_credentials()
+    return await _action_response(
+        action="stripe",
+        state="ok",
+        implemented=True,
+        message="Stripe API credentials responded successfully; no payment objects were created.",
     )

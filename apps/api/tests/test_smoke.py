@@ -4,16 +4,46 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
+from app.api.v1 import smoke as smoke_module
 from app.api.v1.smoke import router as smoke_router
 from app.core.settings import settings
 from app.middleware.exception_handlers import register_exception_handlers
+from app.schemas.smoke import SmokeActionName, SmokeNotificationStatus
 
 
 @pytest.fixture(autouse=True)
 def reset_smoke_flag() -> Iterator[None]:
-    original = settings.ENABLE_SMOKE_TESTS
+    original = {
+        "ENABLE_SMOKE_TESTS": settings.ENABLE_SMOKE_TESTS,
+        "RESEND_API_KEY": settings.RESEND_API_KEY,
+        "RESEND_FROM_EMAIL": settings.RESEND_FROM_EMAIL,
+        "SMOKE_TEST_EMAIL": settings.SMOKE_TEST_EMAIL,
+        "STRIPE_SECRET_KEY": settings.STRIPE_SECRET_KEY,
+    }
     yield
-    settings.ENABLE_SMOKE_TESTS = original
+    for name, value in original.items():
+        setattr(settings, name, value)
+
+
+@pytest.fixture
+def mock_smoke_integrations(monkeypatch: pytest.MonkeyPatch) -> None:
+    async def fake_notification(
+        *,
+        action: SmokeActionName,
+        status_message: str,
+    ) -> SmokeNotificationStatus:
+        return SmokeNotificationStatus(
+            provider="resend",
+            sent=True,
+            recipient=settings.SMOKE_TEST_EMAIL,
+            message_id=f"email-{action}",
+        )
+
+    async def fake_stripe_check() -> None:
+        return None
+
+    monkeypatch.setattr(smoke_module, "send_smoke_notification", fake_notification)
+    monkeypatch.setattr(smoke_module, "check_stripe_credentials", fake_stripe_check)
 
 
 def _client() -> TestClient:
@@ -33,6 +63,9 @@ def test_smoke_config_returns_404_when_disabled() -> None:
 
 def test_smoke_config_returns_presence_without_secret_values() -> None:
     settings.ENABLE_SMOKE_TESTS = True
+    settings.RESEND_API_KEY = "re_test"
+    settings.RESEND_FROM_EMAIL = "Freelio Smoke <smoke@example.com>"
+    settings.STRIPE_SECRET_KEY = "sk_test_123"
 
     response = _client().get("/api/v1/smoke/config")
 
@@ -40,6 +73,8 @@ def test_smoke_config_returns_presence_without_secret_values() -> None:
     body = response.json()
     required = body["data"]["required"]
     names = {item["name"] for item in required}
+    smoke = body["data"]["smoke"]
+    smoke_names = {item["name"] for item in smoke}
 
     assert body["data"]["enabled"] is True
     assert body["data"]["all_required_present"] is True
@@ -49,16 +84,45 @@ def test_smoke_config_returns_presence_without_secret_values() -> None:
         "SUPABASE_URL",
         "SUPABASE_SERVICE_ROLE_KEY",
     }
+    assert smoke_names == {
+        "REDIS_URL",
+        "RESEND_API_KEY",
+        "RESEND_FROM_EMAIL",
+        "SMOKE_TEST_EMAIL",
+        "STRIPE_SECRET_KEY",
+    }
     assert all(set(item) == {"name", "present"} for item in required)
+    assert all(set(item) == {"name", "present"} for item in smoke)
 
 
-@pytest.mark.parametrize("path", ["/queue", "/email", "/pdf", "/reminder"])
-def test_smoke_actions_are_placeholders(path: str) -> None:
+@pytest.mark.parametrize(
+    ("path", "expected_status", "expected_implemented"),
+    [
+        ("/queue", "placeholder", False),
+        ("/email", "ok", True),
+        ("/pdf", "placeholder", False),
+        ("/reminder", "placeholder", False),
+        ("/stripe", "ok", True),
+    ],
+)
+def test_smoke_actions_send_resend_notification_on_success(
+    path: str,
+    expected_status: str,
+    expected_implemented: bool,
+    mock_smoke_integrations: None,
+) -> None:
     settings.ENABLE_SMOKE_TESTS = True
+    settings.RESEND_API_KEY = "re_test"
+    settings.RESEND_FROM_EMAIL = "Freelio Smoke <smoke@example.com>"
+    settings.SMOKE_TEST_EMAIL = "jacobmuck2004@gmail.com"
+    settings.STRIPE_SECRET_KEY = "sk_test_123"
 
     response = _client().post(f"/api/v1/smoke{path}")
 
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["status"] == "placeholder"
-    assert data["implemented"] is False
+    assert data["status"] == expected_status
+    assert data["implemented"] is expected_implemented
+    assert data["notification"]["provider"] == "resend"
+    assert data["notification"]["sent"] is True
+    assert data["notification"]["recipient"] == "jacobmuck2004@gmail.com"
