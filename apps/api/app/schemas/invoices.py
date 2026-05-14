@@ -143,6 +143,17 @@ class InvoiceResponse(BaseModel):
     updated_at: datetime
 
 
+class QueueStatus(BaseModel):
+    pdf: str
+    email: str
+    reminders: str
+
+
+class InvoiceSendResponse(InvoiceResponse):
+    send_event_id: UUID
+    queue_status: QueueStatus
+
+
 class InvoiceListItem(BaseModel):
     id: UUID
     client_id: UUID
