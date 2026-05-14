@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 from app.core.settings import ConfigPresence
 
-SmokeActionName = Literal["queue", "email", "pdf", "reminder", "stripe"]
+SmokeActionName = Literal["queue", "email", "pdf", "reminder", "stripe", "stripe_transaction"]
 SmokeActionState = Literal["ok", "placeholder"]
 
 

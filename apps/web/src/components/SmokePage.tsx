@@ -25,7 +25,20 @@ type SmokeConfig = {
   smoke: ConfigCheck[];
 };
 
-type SmokeActionName = "queue" | "email" | "pdf" | "reminder" | "stripe";
+type SmokeActionName =
+  | "queue"
+  | "email"
+  | "pdf"
+  | "reminder"
+  | "stripe"
+  | "stripe_transaction";
+type SmokeActionEndpoint =
+  | "queue"
+  | "email"
+  | "pdf"
+  | "reminder"
+  | "stripe"
+  | "stripe/transaction";
 
 type SmokeNotification = {
   provider: "resend";
@@ -44,14 +57,26 @@ type SmokeActionResult = {
 
 const actionCards: Array<{
   action: SmokeActionName;
+  endpoint: SmokeActionEndpoint;
   title: string;
   label: string;
 }> = [
-  { action: "queue", title: "Redis queue test", label: "Run queue check" },
-  { action: "email", title: "Email test", label: "Run email check" },
-  { action: "pdf", title: "PDF render/upload test", label: "Run PDF check" },
-  { action: "reminder", title: "Delayed reminder test", label: "Run reminder check" },
-  { action: "stripe", title: "Stripe API test", label: "Run Stripe check" },
+  { action: "queue", endpoint: "queue", title: "Redis queue test", label: "Run queue check" },
+  { action: "email", endpoint: "email", title: "Email test", label: "Run email check" },
+  { action: "pdf", endpoint: "pdf", title: "PDF render/upload test", label: "Run PDF check" },
+  {
+    action: "reminder",
+    endpoint: "reminder",
+    title: "Delayed reminder test",
+    label: "Run reminder check",
+  },
+  { action: "stripe", endpoint: "stripe", title: "Stripe API test", label: "Run Stripe check" },
+  {
+    action: "stripe_transaction",
+    endpoint: "stripe/transaction",
+    title: "Stripe test transaction",
+    label: "Run test transaction",
+  },
 ];
 
 function statusText(check?: ConfigCheck) {
@@ -63,7 +88,10 @@ function statusText(check?: ConfigCheck) {
 
 function defaultActionMessage(action: SmokeActionName, redisReady?: boolean) {
   if (action === "stripe") {
-    return "Checks Stripe credentials only. No payment objects are created.";
+    return "Checks Stripe test credentials only. No payment objects are created.";
+  }
+  if (action === "stripe_transaction") {
+    return "Creates and confirms a $1 Stripe test-mode PaymentIntent.";
   }
   if (action === "email") {
     return "Sends a Resend smoke email to the configured recipient.";
@@ -127,10 +155,10 @@ export function SmokePage() {
     );
   }, [config]);
 
-  async function runAction(action: SmokeActionName) {
+  async function runAction(action: SmokeActionName, endpoint: SmokeActionEndpoint) {
     setBusyAction(action);
     try {
-      const response = await fetch(`/api/v1/smoke/${action}`, {
+      const response = await fetch(`/api/v1/smoke/${endpoint}`, {
         method: "POST",
       });
       const data = await readApiResponse<SmokeActionResult>(response);
@@ -241,7 +269,7 @@ export function SmokePage() {
                 <button
                   className="primary-button smoke-action"
                   disabled={busyAction !== null}
-                  onClick={() => runAction(card.action)}
+                  onClick={() => runAction(card.action, card.endpoint)}
                   type="button"
                 >
                   {busyAction === card.action ? "Running" : card.label}

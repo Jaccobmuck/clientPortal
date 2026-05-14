@@ -35,6 +35,7 @@ class Settings(BaseSettings):
     RESEND_FROM_EMAIL: str | None = None
     SMOKE_TEST_EMAIL: str = "jacobmuck2004@gmail.com"
     STRIPE_SECRET_KEY: str | None = None
+    ENABLE_STRIPE_SMOKE_TRANSACTIONS: bool = False
     RECEIPT_ALLOWED_TYPES: list[str] = [
         "image/jpeg",
         "image/png",
@@ -69,6 +70,7 @@ class Settings(BaseSettings):
                 "RESEND_FROM_EMAIL",
                 "SMOKE_TEST_EMAIL",
                 "STRIPE_SECRET_KEY",
+                "ENABLE_STRIPE_SMOKE_TRANSACTIONS",
             ]
         )
 

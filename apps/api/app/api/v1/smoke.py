@@ -8,7 +8,11 @@ from app.schemas.smoke import (
     SmokeActionStatus,
     SmokeConfigStatus,
 )
-from app.services.smoke import check_stripe_credentials, send_smoke_notification
+from app.services.smoke import (
+    check_stripe_credentials,
+    create_stripe_test_transaction,
+    send_smoke_notification,
+)
 
 router = APIRouter(prefix="/smoke", tags=["smoke"])
 
@@ -101,5 +105,18 @@ async def smoke_stripe() -> BaseResponse[SmokeActionStatus]:
         action="stripe",
         state="ok",
         implemented=True,
-        message="Stripe API credentials responded successfully; no payment objects were created.",
+        message="Stripe test API credentials responded successfully; no payment objects were created.",
+    )
+
+
+@router.post("/stripe/transaction")
+async def smoke_stripe_transaction() -> BaseResponse[SmokeActionStatus]:
+    _require_smoke_tests_enabled()
+    payment_intent_id = await create_stripe_test_transaction()
+    message = f"Stripe test PaymentIntent succeeded in test mode with id {payment_intent_id}."
+    return await _action_response(
+        action="stripe_transaction",
+        state="ok",
+        implemented=True,
+        message=message,
     )
