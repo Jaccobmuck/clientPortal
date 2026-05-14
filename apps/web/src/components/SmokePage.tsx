@@ -22,26 +22,61 @@ type SmokeConfig = {
   enabled: boolean;
   all_required_present: boolean;
   required: ConfigCheck[];
+  smoke: ConfigCheck[];
 };
 
-type SmokeActionName = "queue" | "email" | "pdf" | "reminder";
+type SmokeActionName =
+  | "queue"
+  | "email"
+  | "pdf"
+  | "reminder"
+  | "stripe"
+  | "stripe_transaction";
+type SmokeActionEndpoint =
+  | "queue"
+  | "email"
+  | "pdf"
+  | "reminder"
+  | "stripe"
+  | "stripe/transaction";
+
+type SmokeNotification = {
+  provider: "resend";
+  sent: boolean;
+  recipient: string;
+  message_id?: string | null;
+};
 
 type SmokeActionResult = {
   action: SmokeActionName;
-  status: "placeholder";
+  status: "ok" | "placeholder";
   implemented: boolean;
   message: string;
+  notification: SmokeNotification;
 };
 
 const actionCards: Array<{
   action: SmokeActionName;
+  endpoint: SmokeActionEndpoint;
   title: string;
   label: string;
 }> = [
-  { action: "queue", title: "Redis queue test", label: "Run queue check" },
-  { action: "email", title: "Email test", label: "Run email check" },
-  { action: "pdf", title: "PDF render/upload test", label: "Run PDF check" },
-  { action: "reminder", title: "Delayed reminder test", label: "Run reminder check" },
+  { action: "queue", endpoint: "queue", title: "Redis queue test", label: "Run queue check" },
+  { action: "email", endpoint: "email", title: "Email test", label: "Run email check" },
+  { action: "pdf", endpoint: "pdf", title: "PDF render/upload test", label: "Run PDF check" },
+  {
+    action: "reminder",
+    endpoint: "reminder",
+    title: "Delayed reminder test",
+    label: "Run reminder check",
+  },
+  { action: "stripe", endpoint: "stripe", title: "Stripe API test", label: "Run Stripe check" },
+  {
+    action: "stripe_transaction",
+    endpoint: "stripe/transaction",
+    title: "Stripe test transaction",
+    label: "Run test transaction",
+  },
 ];
 
 function statusText(check?: ConfigCheck) {
@@ -49,6 +84,22 @@ function statusText(check?: ConfigCheck) {
     return "Unknown";
   }
   return check.present ? "Present" : "Missing";
+}
+
+function defaultActionMessage(action: SmokeActionName, redisReady?: boolean) {
+  if (action === "stripe") {
+    return "Checks Stripe test credentials only. No payment objects are created.";
+  }
+  if (action === "stripe_transaction") {
+    return "Creates and confirms a $1 Stripe test-mode PaymentIntent.";
+  }
+  if (action === "email") {
+    return "Sends a Resend smoke email to the configured recipient.";
+  }
+  if (action === "queue" && redisReady === false) {
+    return "Redis config is not present.";
+  }
+  return "Ready to call the smoke endpoint.";
 }
 
 async function readApiResponse<T>(response: Response): Promise<T> {
@@ -99,13 +150,15 @@ export function SmokePage() {
   }, []);
 
   const configByName = useMemo(() => {
-    return new Map(config?.required.map((check) => [check.name, check]) ?? []);
+    return new Map(
+      [...(config?.required ?? []), ...(config?.smoke ?? [])].map((check) => [check.name, check]),
+    );
   }, [config]);
 
-  async function runAction(action: SmokeActionName) {
+  async function runAction(action: SmokeActionName, endpoint: SmokeActionEndpoint) {
     setBusyAction(action);
     try {
-      const response = await fetch(`/api/v1/smoke/${action}`, {
+      const response = await fetch(`/api/v1/smoke/${endpoint}`, {
         method: "POST",
       });
       const data = await readApiResponse<SmokeActionResult>(response);
@@ -118,6 +171,11 @@ export function SmokePage() {
           status: "placeholder",
           implemented: false,
           message: error instanceof Error ? error.message : "Smoke action unavailable",
+          notification: {
+            provider: "resend",
+            sent: false,
+            recipient: "",
+          },
         },
       }));
     } finally {
@@ -161,7 +219,7 @@ export function SmokePage() {
             {configError ? <p className="smoke-error">{configError}</p> : null}
 
             <dl className="smoke-config-list">
-              {(config?.required ?? []).map((check) => (
+              {[...(config?.required ?? []), ...(config?.smoke ?? [])].map((check) => (
                 <div key={check.name}>
                   <dt>{check.name}</dt>
                   <dd className={check.present ? "smoke-ok" : "smoke-warn"}>
@@ -193,20 +251,25 @@ export function SmokePage() {
                     <span className="smoke-card__icon">{card.action.slice(0, 3).toUpperCase()}</span>
                     <h2>{card.title}</h2>
                   </div>
-                  <span className="smoke-pill">Placeholder</span>
+                  <span className="smoke-pill">
+                    {result?.status === "ok" ? "OK" : "Placeholder"}
+                  </span>
                 </div>
 
                 <p className="smoke-card__message">
-                  {result?.message ??
-                    (card.action === "queue" && redisReady === false
-                      ? "Redis config is not present."
-                      : "Ready to call the smoke endpoint.")}
+                  {result
+                    ? `${result.message} ${
+                        result.notification.sent
+                          ? `Notification sent to ${result.notification.recipient}.`
+                          : "Notification was not sent."
+                      }`
+                    : defaultActionMessage(card.action, redisReady)}
                 </p>
 
                 <button
                   className="primary-button smoke-action"
                   disabled={busyAction !== null}
-                  onClick={() => runAction(card.action)}
+                  onClick={() => runAction(card.action, card.endpoint)}
                   type="button"
                 >
                   {busyAction === card.action ? "Running" : card.label}

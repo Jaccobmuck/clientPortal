@@ -31,6 +31,11 @@ class Settings(BaseSettings):
     FREE_TIER_ORG_LIMIT: int = 1
     RECEIPT_BUCKET: str = "receipts"
     RECEIPT_MAX_SIZE_MB: int = 10
+    RESEND_API_KEY: str | None = None
+    RESEND_FROM_EMAIL: str | None = None
+    SMOKE_TEST_EMAIL: str = "jacobmuck2004@gmail.com"
+    STRIPE_SECRET_KEY: str | None = None
+    ENABLE_STRIPE_SMOKE_TRANSACTIONS: bool = False
     RECEIPT_ALLOWED_TYPES: list[str] = [
         "image/jpeg",
         "image/png",
@@ -38,17 +43,36 @@ class Settings(BaseSettings):
         "application/pdf",
     ]
 
+    def config_presence(self, names: list[str]) -> list[ConfigPresence]:
+        return [
+            ConfigPresence(
+                name=name,
+                present=bool(value) and bool(str(value).strip()),
+            )
+            for name in names
+            for value in [getattr(self, name, None)]
+        ]
+
     def required_config_presence(self) -> list[ConfigPresence]:
         required_names = [
             name for name, field in type(self).model_fields.items() if field.is_required()
         ]
-        return [
-            ConfigPresence(name=name, present=bool(str(getattr(self, name, "")).strip()))
-            for name in required_names
-        ]
+        return self.config_presence(required_names)
 
     def required_config_ready(self) -> bool:
         return all(check.present for check in self.required_config_presence())
+
+    def smoke_config_presence(self) -> list[ConfigPresence]:
+        return self.config_presence(
+            [
+                "REDIS_URL",
+                "RESEND_API_KEY",
+                "RESEND_FROM_EMAIL",
+                "SMOKE_TEST_EMAIL",
+                "STRIPE_SECRET_KEY",
+                "ENABLE_STRIPE_SMOKE_TRANSACTIONS",
+            ]
+        )
 
 
 @lru_cache

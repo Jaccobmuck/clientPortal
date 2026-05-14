@@ -14,7 +14,7 @@ $$ LANGUAGE plpgsql;
 
 -- ── Tables ────────────────────────────────────────────────────────────────────
 
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
   id          uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email       text NOT NULL UNIQUE,
   full_name   text,
@@ -23,7 +23,7 @@ CREATE TABLE users (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE organizations (
+CREATE TABLE IF NOT EXISTS organizations (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   name        text NOT NULL,
   slug        text NOT NULL UNIQUE,
@@ -32,14 +32,14 @@ CREATE TABLE organizations (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE organization_members (
+CREATE TABLE IF NOT EXISTS organization_members (
   org_id   uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   user_id  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   role     text NOT NULL DEFAULT 'member',
   PRIMARY KEY (org_id, user_id)
 );
 
-CREATE TABLE clients (
+CREATE TABLE IF NOT EXISTS clients (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id      uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   name        text NOT NULL,
@@ -51,7 +51,7 @@ CREATE TABLE clients (
   updated_at  timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE projects (
+CREATE TABLE IF NOT EXISTS projects (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id       uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   client_id    uuid NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
@@ -62,7 +62,7 @@ CREATE TABLE projects (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE invoices (
+CREATE TABLE IF NOT EXISTS invoices (
   id              uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id          uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   client_id       uuid NOT NULL REFERENCES clients(id),
@@ -83,7 +83,7 @@ CREATE TABLE invoices (
   UNIQUE (org_id, invoice_number)
 );
 
-CREATE TABLE invoice_line_items (
+CREATE TABLE IF NOT EXISTS invoice_line_items (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id   uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   description  text NOT NULL,
@@ -93,7 +93,7 @@ CREATE TABLE invoice_line_items (
   sort_order   int NOT NULL DEFAULT 0
 );
 
-CREATE TABLE payments (
+CREATE TABLE IF NOT EXISTS payments (
   id                        uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id                uuid NOT NULL REFERENCES invoices(id),
   org_id                    uuid NOT NULL REFERENCES organizations(id),
@@ -105,7 +105,7 @@ CREATE TABLE payments (
   created_at                timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE disputes (
+CREATE TABLE IF NOT EXISTS disputes (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id   uuid NOT NULL REFERENCES invoices(id),
   org_id       uuid NOT NULL REFERENCES organizations(id),
@@ -116,7 +116,7 @@ CREATE TABLE disputes (
   updated_at   timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE expenses (
+CREATE TABLE IF NOT EXISTS expenses (
   id           uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id       uuid NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
   project_id   uuid REFERENCES projects(id),
@@ -128,7 +128,7 @@ CREATE TABLE expenses (
   created_at   timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE TABLE reminder_schedule (
+CREATE TABLE IF NOT EXISTS reminder_schedule (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   invoice_id  uuid NOT NULL REFERENCES invoices(id) ON DELETE CASCADE,
   org_id      uuid NOT NULL REFERENCES organizations(id),
@@ -137,7 +137,7 @@ CREATE TABLE reminder_schedule (
   status      text NOT NULL DEFAULT 'pending'
 );
 
-CREATE TABLE notification_log (
+CREATE TABLE IF NOT EXISTS notification_log (
   id          uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
   org_id      uuid NOT NULL REFERENCES organizations(id),
   invoice_id  uuid REFERENCES invoices(id),
@@ -145,6 +145,15 @@ CREATE TABLE notification_log (
   payload     jsonb,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- Preview branches can inherit older tables before replaying this migration.
+ALTER TABLE reminder_schedule
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
+ALTER TABLE reminder_schedule
+  ADD COLUMN IF NOT EXISTS send_at timestamptz;
+UPDATE reminder_schedule SET send_at = now() WHERE send_at IS NULL;
+ALTER TABLE reminder_schedule
+  ALTER COLUMN send_at SET NOT NULL;
 
 -- ── RLS ───────────────────────────────────────────────────────────────────────
 
@@ -163,25 +172,32 @@ ALTER TABLE notification_log    ENABLE ROW LEVEL SECURITY;
 
 -- ── Policies ──────────────────────────────────────────────────────────────────
 
+DROP POLICY IF EXISTS "users_self_access" ON users;
 CREATE POLICY "users_self_access" ON users
   FOR ALL USING (id = auth.uid());
 
+DROP POLICY IF EXISTS "org_members_access" ON organization_members;
 CREATE POLICY "org_members_access" ON organization_members
   FOR ALL USING (user_id = auth.uid());
 
 -- All remaining tables share the same org-membership pattern
+DROP POLICY IF EXISTS "organizations_org_access" ON organizations;
 CREATE POLICY "organizations_org_access" ON organizations
   FOR ALL USING (id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "clients_org_access" ON clients;
 CREATE POLICY "clients_org_access" ON clients
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "projects_org_access" ON projects;
 CREATE POLICY "projects_org_access" ON projects
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "invoices_org_access" ON invoices;
 CREATE POLICY "invoices_org_access" ON invoices
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "invoice_line_items_org_access" ON invoice_line_items;
 CREATE POLICY "invoice_line_items_org_access" ON invoice_line_items
   FOR ALL USING (
     invoice_id IN (
@@ -190,49 +206,60 @@ CREATE POLICY "invoice_line_items_org_access" ON invoice_line_items
     )
   );
 
+DROP POLICY IF EXISTS "payments_org_access" ON payments;
 CREATE POLICY "payments_org_access" ON payments
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "disputes_org_access" ON disputes;
 CREATE POLICY "disputes_org_access" ON disputes
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "expenses_org_access" ON expenses;
 CREATE POLICY "expenses_org_access" ON expenses
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "reminder_schedule_org_access" ON reminder_schedule;
 CREATE POLICY "reminder_schedule_org_access" ON reminder_schedule
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
+DROP POLICY IF EXISTS "notification_log_org_access" ON notification_log;
 CREATE POLICY "notification_log_org_access" ON notification_log
   FOR ALL USING (org_id IN (SELECT org_id FROM organization_members WHERE user_id = auth.uid()));
 
 -- ── Triggers ──────────────────────────────────────────────────────────────────
 
+DROP TRIGGER IF EXISTS set_users_updated_at ON users;
 CREATE TRIGGER set_users_updated_at
   BEFORE UPDATE ON users FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS set_organizations_updated_at ON organizations;
 CREATE TRIGGER set_organizations_updated_at
   BEFORE UPDATE ON organizations FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS set_clients_updated_at ON clients;
 CREATE TRIGGER set_clients_updated_at
   BEFORE UPDATE ON clients FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS set_projects_updated_at ON projects;
 CREATE TRIGGER set_projects_updated_at
   BEFORE UPDATE ON projects FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS set_invoices_updated_at ON invoices;
 CREATE TRIGGER set_invoices_updated_at
   BEFORE UPDATE ON invoices FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+DROP TRIGGER IF EXISTS set_disputes_updated_at ON disputes;
 CREATE TRIGGER set_disputes_updated_at
   BEFORE UPDATE ON disputes FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
 -- ── Indexes ───────────────────────────────────────────────────────────────────
 
-CREATE INDEX idx_invoices_org_id ON invoices(org_id);
-CREATE INDEX idx_invoices_client_id ON invoices(client_id);
-CREATE INDEX idx_invoices_pay_token ON invoices(pay_token);
-CREATE INDEX idx_invoices_status ON invoices(status);
-CREATE INDEX idx_clients_org_id ON clients(org_id);
-CREATE INDEX idx_projects_org_id ON projects(org_id);
-CREATE INDEX idx_payments_invoice_id ON payments(invoice_id);
-CREATE INDEX idx_payments_stripe_payment_intent_id ON payments(stripe_payment_intent_id);
-CREATE INDEX idx_reminder_schedule_send_at ON reminder_schedule(send_at) WHERE status = 'pending';
+CREATE INDEX IF NOT EXISTS idx_invoices_org_id ON invoices(org_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_client_id ON invoices(client_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_pay_token ON invoices(pay_token);
+CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices(status);
+CREATE INDEX IF NOT EXISTS idx_clients_org_id ON clients(org_id);
+CREATE INDEX IF NOT EXISTS idx_projects_org_id ON projects(org_id);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
+CREATE INDEX IF NOT EXISTS idx_payments_stripe_payment_intent_id ON payments(stripe_payment_intent_id);
+CREATE INDEX IF NOT EXISTS idx_reminder_schedule_send_at ON reminder_schedule(send_at) WHERE status = 'pending';
