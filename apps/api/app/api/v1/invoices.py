@@ -1,5 +1,5 @@
 from datetime import date
-from uuid import UUID, uuid4
+from uuid import UUID
 
 from fastapi import APIRouter, Query
 
@@ -13,13 +13,13 @@ from app.schemas.invoices import (
     InvoiceListFilters,
     InvoiceListResponse,
     InvoiceResponse,
+    InvoiceSendResponse,
     InvoiceStatus,
     UpdateInvoiceDraft,
     VoidInvoiceRequest,
 )
 from app.services import invoices as invoice_service
 from app.utils.notification_log import write_audit
-from app.utils.queues import enqueue_email, enqueue_pdf
 from app.utils.status_machine import assert_transition
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
@@ -95,36 +95,14 @@ async def send_invoice(
     invoice_id: UUID,
     ctx: OrgUser,
     db: SupabaseDep,
-) -> BaseResponse[InvoiceResponse]:
-    invoice = await repo.get_invoice(db, org_id=ctx.org_id, invoice_id=invoice_id)
-    if invoice is None:
-        raise NotFoundError("invoice not found", code="invoice_not_found")
-
-    if invoice.status != InvoiceStatus.DRAFT:
-        from app.exceptions import ConflictError
-
-        raise ConflictError("invoice is already locked", code="invoice_locked")
-
-    line_items = await repo.list_line_items(db, invoice_id=invoice_id)
-    if not line_items:
-        from app.exceptions import ValidationError
-
-        raise ValidationError("invoice has no line items", code="no_line_items")
-
-    assert_transition(invoice.status, "sent")
-
-    updated = await repo.send_invoice(
+) -> BaseResponse[InvoiceSendResponse]:
+    result = await invoice_service.send_invoice(
         db,
         org_id=ctx.org_id,
         invoice_id=invoice_id,
-        sent_at=utc_now(),
-        pay_token=uuid4(),
+        user_id=ctx.user_id,
     )
-
-    await enqueue_pdf(db, invoice_id=invoice_id, org_id=ctx.org_id)
-    await enqueue_email(db, invoice_id=invoice_id, org_id=ctx.org_id)
-
-    return BaseResponse(success=True, data=updated)
+    return BaseResponse(success=True, data=result)
 
 
 @router.post("/{invoice_id}/void")
