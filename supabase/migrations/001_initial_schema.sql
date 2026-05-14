@@ -146,6 +146,10 @@ CREATE TABLE IF NOT EXISTS notification_log (
   created_at  timestamptz NOT NULL DEFAULT now()
 );
 
+-- Preview branches can inherit older tables before replaying this migration.
+ALTER TABLE reminder_schedule
+  ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
+
 -- ── RLS ───────────────────────────────────────────────────────────────────────
 
 ALTER TABLE users               ENABLE ROW LEVEL SECURITY;
