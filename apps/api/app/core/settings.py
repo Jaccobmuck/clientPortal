@@ -1,7 +1,13 @@
 from functools import lru_cache
 from typing import Literal
 
+from pydantic import BaseModel
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class ConfigPresence(BaseModel):
+    name: str
+    present: bool
 
 
 class Settings(BaseSettings):
@@ -14,6 +20,7 @@ class Settings(BaseSettings):
 
     ENVIRONMENT: Literal["development", "production"] = "development"
     DEBUG: bool = False
+    ENABLE_SMOKE_TESTS: bool = False
     SECRET_KEY: str
     DATABASE_URL: str
     SUPABASE_URL: str
@@ -30,6 +37,18 @@ class Settings(BaseSettings):
         "image/webp",
         "application/pdf",
     ]
+
+    def required_config_presence(self) -> list[ConfigPresence]:
+        required_names = [
+            name for name, field in type(self).model_fields.items() if field.is_required()
+        ]
+        return [
+            ConfigPresence(name=name, present=bool(str(getattr(self, name, "")).strip()))
+            for name in required_names
+        ]
+
+    def required_config_ready(self) -> bool:
+        return all(check.present for check in self.required_config_presence())
 
 
 @lru_cache
