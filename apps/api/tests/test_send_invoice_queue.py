@@ -106,9 +106,7 @@ class FakeSendClient:
     ) -> None:
         self.tables: dict[str, list[dict[str, Any]]] = {
             "invoices": invoices,
-            "invoice_line_items": [
-                _line_item_row(UUID(str(inv["id"]))) for inv in invoices
-            ],
+            "invoice_line_items": [_line_item_row(UUID(str(inv["id"]))) for inv in invoices],
             "clients": list(clients or []),
             "job_outbox": list(outbox or []),
         }
@@ -223,20 +221,22 @@ def _setup_sent(
         from app.utils.queues import build_job_payload
 
         for q in outbox_queues:
-            outbox.append({
-                "id": str(uuid4()),
-                "org_id": str(ids["org_id"]),
-                "queue_name": q,
-                "payload": build_job_payload(
-                    invoice_id=ids["invoice_id"],
-                    org_id=ids["org_id"],
-                    user_id=ids["user_id"],
-                    send_event_id=uuid4(),
-                    queue_name=q,
-                ),
-                "status": "pending",
-                "created_at": _NOW,
-            })
+            outbox.append(
+                {
+                    "id": str(uuid4()),
+                    "org_id": str(ids["org_id"]),
+                    "queue_name": q,
+                    "payload": build_job_payload(
+                        invoice_id=ids["invoice_id"],
+                        org_id=ids["org_id"],
+                        user_id=ids["user_id"],
+                        send_event_id=uuid4(),
+                        queue_name=q,
+                    ),
+                    "status": "pending",
+                    "created_at": _NOW,
+                }
+            )
 
     db = FakeSendClient(invoices=[inv], clients=[client], outbox=outbox)
     return db, ids
@@ -321,8 +321,7 @@ async def test_draft_send_uses_deterministic_job_ids() -> None:
 
     actual_ids = {r["payload"]["job_id"] for r in db.tables["job_outbox"]}
     expected_ids = {
-        build_job_id(ids["invoice_id"], q)
-        for q in [QUEUE_PDF, QUEUE_EMAIL, QUEUE_REMINDER]
+        build_job_id(ids["invoice_id"], q) for q in [QUEUE_PDF, QUEUE_EMAIL, QUEUE_REMINDER]
     }
     assert actual_ids == expected_ids
 

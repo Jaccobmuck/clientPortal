@@ -193,7 +193,10 @@ async def test_ensure_job_creates_new_job_when_empty() -> None:
     )
 
     status = await ensure_job(
-        _as_client(db), org_id=_IDS["org_id"], queue_name=QUEUE_PDF, payload=payload,
+        _as_client(db),
+        org_id=_IDS["org_id"],
+        queue_name=QUEUE_PDF,
+        payload=payload,
     )
 
     assert status == "queued"
@@ -214,7 +217,10 @@ async def test_ensure_job_returns_existing_when_already_present() -> None:
     )
 
     status = await ensure_job(
-        _as_client(db), org_id=_IDS["org_id"], queue_name=QUEUE_PDF, payload=payload,
+        _as_client(db),
+        org_id=_IDS["org_id"],
+        queue_name=QUEUE_PDF,
+        payload=payload,
     )
 
     assert status == "pending"
@@ -233,7 +239,10 @@ async def test_ensure_job_raises_internal_error_on_api_failure() -> None:
 
     with pytest.raises(InternalError):
         await ensure_job(
-            _as_client(db), org_id=_IDS["org_id"], queue_name=QUEUE_PDF, payload=payload,
+            _as_client(db),
+            org_id=_IDS["org_id"],
+            queue_name=QUEUE_PDF,
+            payload=payload,
         )
 
 

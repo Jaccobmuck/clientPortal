@@ -97,7 +97,10 @@ async def send_invoice(
     db: SupabaseDep,
 ) -> BaseResponse[InvoiceSendResponse]:
     result = await invoice_service.send_invoice(
-        db, org_id=ctx.org_id, invoice_id=invoice_id, user_id=ctx.user_id,
+        db,
+        org_id=ctx.org_id,
+        invoice_id=invoice_id,
+        user_id=ctx.user_id,
     )
     return BaseResponse(success=True, data=result)
 

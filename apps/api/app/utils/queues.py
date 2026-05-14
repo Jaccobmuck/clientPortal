@@ -111,7 +111,10 @@ async def ensure_job(
     """
     job_id = payload["job_id"]
     existing = await find_existing_job(
-        client, org_id=org_id, queue_name=queue_name, job_id=job_id,
+        client,
+        org_id=org_id,
+        queue_name=queue_name,
+        job_id=job_id,
     )
     if existing is not None:
         return existing["status"]
