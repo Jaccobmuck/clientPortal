@@ -59,6 +59,7 @@ def build_job_payload(
     send_event_id: UUID,
     queue_name: str,
 ) -> dict[str, Any]:
+    """Small, ID-only payload — workers reload full data from the DB."""
     return {
         "job_id": build_job_id(invoice_id, queue_name),
         "invoice_id": str(invoice_id),
