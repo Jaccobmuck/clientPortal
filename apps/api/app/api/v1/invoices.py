@@ -13,6 +13,7 @@ from app.schemas.invoices import (
     InvoiceListFilters,
     InvoiceListResponse,
     InvoiceResponse,
+    InvoiceSendResponse,
     InvoiceStatus,
     UpdateInvoiceDraft,
     VoidInvoiceRequest,
@@ -94,9 +95,11 @@ async def send_invoice(
     invoice_id: UUID,
     ctx: OrgUser,
     db: SupabaseDep,
-) -> BaseResponse[InvoiceResponse]:
-    invoice = await invoice_service.send_invoice(db, org_id=ctx.org_id, invoice_id=invoice_id)
-    return BaseResponse(success=True, data=invoice)
+) -> BaseResponse[InvoiceSendResponse]:
+    result = await invoice_service.send_invoice(
+        db, org_id=ctx.org_id, invoice_id=invoice_id, user_id=ctx.user_id,
+    )
+    return BaseResponse(success=True, data=result)
 
 
 @router.post("/{invoice_id}/void")
