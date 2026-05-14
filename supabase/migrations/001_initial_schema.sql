@@ -149,6 +149,11 @@ CREATE TABLE IF NOT EXISTS notification_log (
 -- Preview branches can inherit older tables before replaying this migration.
 ALTER TABLE reminder_schedule
   ADD COLUMN IF NOT EXISTS status text NOT NULL DEFAULT 'pending';
+ALTER TABLE reminder_schedule
+  ADD COLUMN IF NOT EXISTS send_at timestamptz;
+UPDATE reminder_schedule SET send_at = now() WHERE send_at IS NULL;
+ALTER TABLE reminder_schedule
+  ALTER COLUMN send_at SET NOT NULL;
 
 -- ── RLS ───────────────────────────────────────────────────────────────────────
 
