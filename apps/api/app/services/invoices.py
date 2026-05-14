@@ -1,5 +1,5 @@
 import re
-from uuid import UUID
+from uuid import UUID, uuid4
 
 from postgrest import AsyncPostgrestClient
 
@@ -12,10 +12,12 @@ from app.schemas.invoices import (
     InvoiceListFilters,
     InvoiceListResponse,
     InvoiceResponse,
+    InvoiceSendResponse,
     InvoiceStatus,
+    QueueStatus,
     UpdateInvoiceDraft,
 )
-from app.utils.queues import enqueue_email, enqueue_pdf
+from app.utils.queues import ensure_invoice_jobs
 from app.utils.status_machine import assert_invoice_editable, assert_transition
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
@@ -164,13 +166,27 @@ async def send_invoice(
     *,
     org_id: UUID,
     invoice_id: UUID,
-) -> InvoiceResponse:
+    user_id: UUID,
+) -> InvoiceSendResponse:
+    send_event_id = uuid4()
+
     invoice = await repo.get_invoice(db, org_id=org_id, invoice_id=invoice_id)
     if invoice is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
 
     if invoice.status == InvoiceStatus.SENT:
-        return invoice
+        statuses = await ensure_invoice_jobs(
+            db,
+            org_id=org_id,
+            invoice_id=invoice_id,
+            user_id=user_id,
+            send_event_id=send_event_id,
+        )
+        return InvoiceSendResponse(
+            **invoice.model_dump(),
+            send_event_id=send_event_id,
+            queue_status=QueueStatus(**statuses),
+        )
 
     if invoice.status != InvoiceStatus.DRAFT:
         raise ConflictError(
@@ -207,7 +223,16 @@ async def send_invoice(
     if updated is None:
         raise NotFoundError("invoice not found", code="invoice_not_found")
 
-    await enqueue_pdf(db, invoice_id=invoice_id, org_id=org_id)
-    await enqueue_email(db, invoice_id=invoice_id, org_id=org_id)
+    statuses = await ensure_invoice_jobs(
+        db,
+        org_id=org_id,
+        invoice_id=invoice_id,
+        user_id=user_id,
+        send_event_id=send_event_id,
+    )
 
-    return updated
+    return InvoiceSendResponse(
+        **updated.model_dump(),
+        send_event_id=send_event_id,
+        queue_status=QueueStatus(**statuses),
+    )
