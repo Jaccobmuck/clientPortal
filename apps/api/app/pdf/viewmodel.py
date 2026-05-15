@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from typing import TypedDict
 
@@ -91,7 +91,7 @@ def format_date(iso_string: str | None) -> str | None:
         return dt.strftime("%B %d, %Y")
     except (ValueError, TypeError):
         try:
-            dt = datetime.strptime(iso_string[:10], "%Y-%m-%d").replace(tzinfo=timezone.utc)
+            dt = datetime.strptime(iso_string[:10], "%Y-%m-%d").replace(tzinfo=UTC)
             return dt.strftime("%B %d, %Y")
         except (ValueError, TypeError):
             return None

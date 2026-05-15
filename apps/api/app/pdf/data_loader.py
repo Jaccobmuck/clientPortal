@@ -28,7 +28,7 @@ async def load_invoice(
     rows = cast("list[dict[str, Any]]", response.data or [])
     if not rows:
         return None
-    return cast(InvoiceRow, rows[0])
+    return cast("InvoiceRow", rows[0])
 
 
 async def load_client(
@@ -48,7 +48,7 @@ async def load_client(
     rows = cast("list[dict[str, Any]]", response.data or [])
     if not rows:
         return None
-    return cast(ClientRow, rows[0])
+    return cast("ClientRow", rows[0])
 
 
 async def load_org(
@@ -65,7 +65,7 @@ async def load_org(
     rows = cast("list[dict[str, Any]]", response.data or [])
     if not rows:
         return None
-    return cast(OrgRow, rows[0])
+    return cast("OrgRow", rows[0])
 
 
 async def load_line_items(

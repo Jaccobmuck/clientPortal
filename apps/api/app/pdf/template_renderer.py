@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from dataclasses import asdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from app.pdf.viewmodel import InvoicePdfViewModel
+if TYPE_CHECKING:
+    from app.pdf.viewmodel import InvoicePdfViewModel
 
 _TEMPLATE_DIR = Path(__file__).parent / "templates"
 
