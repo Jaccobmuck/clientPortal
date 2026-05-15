@@ -77,11 +77,15 @@ async def smoke_email() -> BaseResponse[SmokeActionStatus]:
     )
 
 
-@router.post("/pdf")
-async def smoke_pdf() -> BaseResponse[SmokeActionStatus]:
+def _render_smoke_pdf() -> tuple[bytes, str]:
     from app.pdf.smoke import smoke_render_pdf
 
-    pdf_bytes, _filename = smoke_render_pdf()
+    return smoke_render_pdf()
+
+
+@router.post("/pdf")
+async def smoke_pdf() -> BaseResponse[SmokeActionStatus]:
+    pdf_bytes, _filename = _render_smoke_pdf()
     file_size_kb = len(pdf_bytes) / 1024
 
     return await _action_response(

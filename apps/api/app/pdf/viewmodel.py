@@ -99,7 +99,7 @@ def format_date(iso_string: str | None) -> str | None:
 
 def format_tax_rate(db_value: str) -> str:
     try:
-        value = Decimal(db_value) * 100
+        value = (Decimal(db_value) * 100).normalize()
         if value == value.to_integral_value():
             return f"{int(value)}%"
         return f"{value}%"

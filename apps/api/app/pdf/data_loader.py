@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import TYPE_CHECKING, Any, cast
 
-from app.pdf.viewmodel import ClientRow, InvoiceRow, LineItemRow, OrgRow
+if TYPE_CHECKING:
+    from app.pdf.viewmodel import ClientRow, InvoiceRow, LineItemRow, OrgRow
 
 _INVOICE_COLUMNS = (
     "id, org_id, client_id, invoice_number, status, pay_token, "
