@@ -22,6 +22,7 @@ import {
 import { renderInvoiceSent } from "../email/templates/invoiceSent.js";
 import { renderPaymentReceived } from "../email/templates/paymentReceived.js";
 import { renderPaymentConfirmed } from "../email/templates/paymentConfirmed.js";
+import { renderOverdueReminder } from "../email/templates/overdueReminder.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -337,4 +338,39 @@ test("renderPaymentConfirmed does not contain pay URL", () => {
 test("renderPaymentConfirmed includes paid date when present", () => {
   const result = renderPaymentConfirmed(createTestViewModel({ paidAtFormatted: "January 20, 2026" }));
   assert.ok(result.html.includes("January 20, 2026"));
+});
+
+// ── overdue_reminder template ──────────────────────────────
+
+test("renderOverdueReminder renders without throwing", () => {
+  const result = renderOverdueReminder(createTestViewModel({ reminderOffsetDays: 7 }));
+  assert.ok(result.subject);
+  assert.ok(result.html);
+  assert.ok(result.text);
+});
+
+test("renderOverdueReminder subject contains invoice number", () => {
+  const result = renderOverdueReminder(createTestViewModel());
+  assert.ok(result.subject.includes("INV-2026-0001"));
+  assert.ok(result.subject.includes("overdue"));
+});
+
+test("renderOverdueReminder HTML contains pay URL", () => {
+  const result = renderOverdueReminder(createTestViewModel());
+  assert.ok(result.html.includes("https://app.freelio.net/pay/tok-abc-123"));
+});
+
+test("renderOverdueReminder mentions offset days when present", () => {
+  const result = renderOverdueReminder(createTestViewModel({ reminderOffsetDays: 7 }));
+  assert.ok(result.html.includes("7 days past due"));
+});
+
+test("renderOverdueReminder uses singular day for offset 1", () => {
+  const result = renderOverdueReminder(createTestViewModel({ reminderOffsetDays: 1 }));
+  assert.ok(result.html.includes("1 day past due"));
+});
+
+test("renderOverdueReminder omits offset note when undefined", () => {
+  const result = renderOverdueReminder(createTestViewModel({ reminderOffsetDays: undefined }));
+  assert.ok(!result.html.includes("past due"));
 });
