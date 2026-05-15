@@ -16,6 +16,7 @@ import {
   type QueuePublisherClient,
 } from "../queues/publishers/invoiceQueuePublisher.js";
 import { assertRedisConfigured, queueHealthCheck } from "../queues/redis.js";
+import { startWorkerProcess } from "../runtime.js";
 import type { InvoicePdfJob } from "../types/jobs.js";
 
 test("queue constants match locked names", () => {
@@ -128,6 +129,29 @@ test("missing REDIS_URL fails clearly", async () => {
     status: "config_error",
     error: "REDIS_URL is required for BullMQ workers.",
   });
+});
+
+test("worker startup idles without Redis when no processors are enabled", () => {
+  const warn = console.warn;
+  const warnings: unknown[][] = [];
+  console.warn = (...args: unknown[]) => {
+    warnings.push(args);
+  };
+
+  try {
+    const result = startWorkerProcess({ NODE_ENV: "production" });
+    assert.equal(result, "idle");
+    assert.equal(warnings.length, 1);
+  } finally {
+    console.warn = warn;
+  }
+});
+
+test("smoke workers still require REDIS_URL", () => {
+  assert.throws(
+    () => startWorkerProcess({ NODE_ENV: "production", ENABLE_SMOKE_TESTS: "true" }),
+    /REDIS_URL is required/,
+  );
 });
 
 class FakeQueue<T> implements QueuePublisherClient<T> {
