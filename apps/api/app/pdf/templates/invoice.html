@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <style>
+    @page {
+      size: letter;
+      margin: 0.75in;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      font-size: 13px;
+      color: #1a1a1a;
+      line-height: 1.5;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 40px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid #2563eb;
+    }
+
+    .org-name {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .invoice-badge {
+      text-align: right;
+    }
+
+    .invoice-label {
+      font-size: 28px;
+      font-weight: 700;
+      color: #2563eb;
+      letter-spacing: 2px;
+      margin-bottom: 4px;
+    }
+
+    .invoice-number {
+      font-size: 14px;
+      color: #555;
+    }
+
+    .meta-section {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+
+    .meta-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-bottom: 6px;
+    }
+
+    .bill-to .client-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
+
+    .bill-to p {
+      margin-bottom: 2px;
+      color: #444;
+    }
+
+    .invoice-details p {
+      margin-bottom: 4px;
+      color: #444;
+      text-align: right;
+    }
+
+    .invoice-details strong {
+      color: #1a1a1a;
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .status-sent { background: #dbeafe; color: #1e40af; }
+    .status-locked { background: #fef3c7; color: #92400e; }
+    .status-paid { background: #d1fae5; color: #065f46; }
+    .status-disputed { background: #fee2e2; color: #991b1b; }
+    .status-resolved { background: #e0e7ff; color: #3730a3; }
+    .status-void { background: #f3f4f6; color: #6b7280; }
+    .status-overdue { background: #fee2e2; color: #991b1b; }
+
+    .line-items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 24px;
+    }
+
+    .line-items-table th {
+      background: #f8fafc;
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 600;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .line-items-table th:nth-child(2),
+    .line-items-table th:nth-child(3),
+    .line-items-table th:nth-child(4) {
+      text-align: right;
+    }
+
+    .line-items-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      vertical-align: top;
+    }
+
+    .line-items-table td:nth-child(2),
+    .line-items-table td:nth-child(3),
+    .line-items-table td:nth-child(4) {
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    .line-items-table tbody tr:last-child td {
+      border-bottom: 2px solid #e2e8f0;
+    }
+
+    .totals {
+      margin-left: auto;
+      width: 280px;
+      margin-bottom: 32px;
+    }
+
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      color: #555;
+    }
+
+    .totals-row.total-line {
+      border-top: 2px solid #1a1a1a;
+      margin-top: 4px;
+      padding-top: 10px;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1a1a1a;
+    }
+
+    .notes-section {
+      margin-top: 24px;
+      padding-top: 16px;
+      border-top: 1px solid #e5e5e5;
+    }
+
+    .notes-section .meta-label {
+      margin-bottom: 8px;
+    }
+
+    .notes-section p {
+      color: #555;
+      white-space: pre-wrap;
+    }
+
+    .footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 11px;
+      color: #aaa;
+      padding: 12px 0;
+    }
+
+    .void-watermark {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) rotate(-45deg);
+      font-size: 120px;
+      color: rgba(220, 38, 38, 0.12);
+      font-weight: 900;
+      letter-spacing: 20px;
+      z-index: 1000;
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  {% if is_void %}
+  <div class="void-watermark">VOID</div>
+  {% endif %}
+
+  <div class="header">
+    <div>
+      <h1 class="org-name">{{ org_name }}</h1>
+    </div>
+    <div class="invoice-badge">
+      <div class="invoice-label">INVOICE</div>
+      <div class="invoice-number">{{ invoice_number }}</div>
+    </div>
+  </div>
+
+  <div class="meta-section">
+    <div class="bill-to">
+      <div class="meta-label">Bill To</div>
+      <p class="client-name">{{ client_name }}</p>
+      {% if client_company %}<p>{{ client_company }}</p>{% endif %}
+      <p>{{ client_email }}</p>
+    </div>
+    <div class="invoice-details">
+      {% if issued_at_formatted %}
+      <p>Issue Date: <strong>{{ issued_at_formatted }}</strong></p>
+      {% endif %}
+      {% if due_date_formatted %}
+      <p>Due Date: <strong>{{ due_date_formatted }}</strong></p>
+      {% endif %}
+      <p>Status:
+        <span class="status-badge status-{{ invoice_status }}">{{ invoice_status }}</span>
+      </p>
+      {% if paid_at_formatted %}
+      <p>Paid: <strong>{{ paid_at_formatted }}</strong></p>
+      {% endif %}
+    </div>
+  </div>
+
+  <table class="line-items-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th>Qty</th>
+        <th>Unit Price</th>
+        <th>Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for item in line_items %}
+      <tr>
+        <td>{{ item.description }}</td>
+        <td>{{ item.quantity }}</td>
+        <td>{{ item.unit_price_formatted }}</td>
+        <td>{{ item.amount_formatted }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="totals">
+    <div class="totals-row">
+      <span>Subtotal</span>
+      <span>{{ subtotal_formatted }}</span>
+    </div>
+    {% if tax_formatted != "$0.00" %}
+    <div class="totals-row">
+      <span>Tax ({{ tax_rate_formatted }})</span>
+      <span>{{ tax_formatted }}</span>
+    </div>
+    {% endif %}
+    <div class="totals-row total-line">
+      <span>Total</span>
+      <span>{{ total_formatted }}</span>
+    </div>
+  </div>
+
+  {% if notes %}
+  <div class="notes-section">
+    <div class="meta-label">Notes</div>
+    <p>{{ notes }}</p>
+  </div>
+  {% endif %}
+
+  <div class="footer">
+    {{ org_name }}
+  </div>
+</body>
+</html>

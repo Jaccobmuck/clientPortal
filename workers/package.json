@@ -11,12 +11,13 @@
     "test": "tsx --test src/test/*.test.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.105.4",
     "bullmq": "^5.0.0",
     "ioredis": "^5.0.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.7.0",
-    "tsx": "^4.0.0"
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
   }
 }
