@@ -5,6 +5,19 @@ import {
   loadResendConfig,
   ResendConfigurationError,
 } from "../email/resendClient.js";
+import {
+  assertSupabaseConfigured,
+  SupabaseConfigurationError,
+} from "../email/supabaseClient.js";
+import {
+  formatCurrency,
+  formatDate,
+  buildPayUrl,
+  buildViewModel,
+  type InvoiceRow,
+  type ClientRow,
+  type OrgRow,
+} from "../email/viewModels.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -76,4 +89,146 @@ test("loadResendConfig throws when RESEND_FROM_EMAIL is missing", () => {
       err instanceof ResendConfigurationError &&
       /RESEND_FROM_EMAIL/.test(err.message),
   );
+});
+
+// ── Supabase config ────────────────────────────────────────
+
+test("assertSupabaseConfigured reads env vars", () => {
+  const config = assertSupabaseConfigured({
+    SUPABASE_URL: "https://test.supabase.co",
+    SUPABASE_SERVICE_ROLE_KEY: "eyJtest",
+  } as unknown as NodeJS.ProcessEnv);
+
+  assert.equal(config.url, "https://test.supabase.co");
+  assert.equal(config.serviceRoleKey, "eyJtest");
+});
+
+test("assertSupabaseConfigured throws when SUPABASE_URL is missing", () => {
+  assert.throws(
+    () =>
+      assertSupabaseConfigured({
+        SUPABASE_SERVICE_ROLE_KEY: "eyJtest",
+      } as unknown as NodeJS.ProcessEnv),
+    (err) =>
+      err instanceof SupabaseConfigurationError &&
+      /SUPABASE_URL/.test(err.message),
+  );
+});
+
+test("assertSupabaseConfigured throws when SUPABASE_SERVICE_ROLE_KEY is missing", () => {
+  assert.throws(
+    () =>
+      assertSupabaseConfigured({
+        SUPABASE_URL: "https://test.supabase.co",
+      } as unknown as NodeJS.ProcessEnv),
+    (err) =>
+      err instanceof SupabaseConfigurationError &&
+      /SUPABASE_SERVICE_ROLE_KEY/.test(err.message),
+  );
+});
+
+// ── Format helpers ─────────────────────────────────────────
+
+test("formatCurrency formats standard amounts", () => {
+  assert.equal(formatCurrency("1250.00"), "$1,250.00");
+  assert.equal(formatCurrency("0.50"), "$0.50");
+  assert.equal(formatCurrency("99999.99"), "$99,999.99");
+  assert.equal(formatCurrency("0"), "$0.00");
+});
+
+test("formatCurrency handles NaN gracefully", () => {
+  assert.equal(formatCurrency("not-a-number"), "$0.00");
+});
+
+test("formatDate formats ISO dates", () => {
+  assert.equal(formatDate("2026-01-15"), "January 15, 2026");
+  assert.equal(formatDate("2026-06-01T12:00:00Z"), "June 1, 2026");
+});
+
+test("formatDate returns null for null or invalid input", () => {
+  assert.equal(formatDate(null), null);
+  assert.equal(formatDate("not-a-date"), null);
+});
+
+test("buildPayUrl constructs URL from token and frontend URL", () => {
+  assert.equal(
+    buildPayUrl("abc-123", "https://app.freelio.net"),
+    "https://app.freelio.net/pay/abc-123",
+  );
+});
+
+test("buildPayUrl strips trailing slashes from frontend URL", () => {
+  assert.equal(
+    buildPayUrl("abc-123", "https://app.freelio.net/"),
+    "https://app.freelio.net/pay/abc-123",
+  );
+});
+
+// ── View model ─────────────────────────────────────────────
+
+const fakeInvoice: InvoiceRow = {
+  id: "inv-001",
+  org_id: "org-001",
+  client_id: "client-001",
+  invoice_number: "INV-2026-0001",
+  status: "sent",
+  pay_token: "tok-abc-123",
+  due_date: "2026-02-15",
+  issued_at: "2026-01-15T00:00:00Z",
+  sent_at: "2026-01-15T10:00:00Z",
+  paid_at: null,
+  subtotal: "1000.00",
+  tax_rate: "0.0800",
+  tax_amount: "80.00",
+  total: "1080.00",
+  notes: "Test invoice",
+};
+
+const fakeClient: ClientRow = {
+  id: "client-001",
+  name: "Acme Corp",
+  email: "billing@acme.com",
+  company: "Acme Corporation",
+};
+
+const fakeOrg: OrgRow = {
+  id: "org-001",
+  name: "Freelio Studio",
+  slug: "freelio-studio",
+};
+
+test("buildViewModel assembles all fields correctly", () => {
+  const vm = buildViewModel({
+    invoice: fakeInvoice,
+    client: fakeClient,
+    org: fakeOrg,
+    frontendUrl: "https://app.freelio.net",
+    reminderOffsetDays: 7,
+  });
+
+  assert.equal(vm.invoiceNumber, "INV-2026-0001");
+  assert.equal(vm.invoiceStatus, "sent");
+  assert.equal(vm.clientName, "Acme Corp");
+  assert.equal(vm.clientEmail, "billing@acme.com");
+  assert.equal(vm.clientCompany, "Acme Corporation");
+  assert.equal(vm.orgName, "Freelio Studio");
+  assert.equal(vm.totalFormatted, "$1,080.00");
+  assert.equal(vm.subtotalFormatted, "$1,000.00");
+  assert.equal(vm.taxFormatted, "$80.00");
+  assert.equal(vm.dueDateFormatted, "February 15, 2026");
+  assert.equal(vm.issuedAtFormatted, "January 15, 2026");
+  assert.equal(vm.paidAtFormatted, null);
+  assert.equal(vm.payUrl, "https://app.freelio.net/pay/tok-abc-123");
+  assert.equal(vm.reminderOffsetDays, 7);
+});
+
+test("buildViewModel defaults reminderOffsetDays to undefined", () => {
+  const vm = buildViewModel({
+    invoice: fakeInvoice,
+    client: fakeClient,
+    org: fakeOrg,
+    frontendUrl: "https://app.freelio.net",
+  });
+
+  assert.equal(vm.reminderOffsetDays, undefined);
 });
