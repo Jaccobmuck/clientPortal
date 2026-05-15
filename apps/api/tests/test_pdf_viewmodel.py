@@ -30,7 +30,12 @@ def _fake_invoice():
 
 
 def _fake_client():
-    return {"id": "client-001", "name": "Acme Corp", "email": "billing@acme.com", "company": "Acme Inc."}
+    return {
+        "id": "client-001",
+        "name": "Acme Corp",
+        "email": "billing@acme.com",
+        "company": "Acme Inc.",
+    }
 
 
 def _fake_org():
