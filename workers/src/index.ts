@@ -9,6 +9,7 @@ export {
   enqueueInvoiceReminderScheduleJob,
   ensureInvoiceSendJobs,
 } from "./queues/publishers/invoiceQueuePublisher.js";
+export { createPdfWorker } from "./processors/pdfWorker.js";
 export { startWorkerProcess } from "./runtime.js";
 export type { WorkerStartupStatus } from "./runtime.js";
 
