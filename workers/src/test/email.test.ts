@@ -17,7 +17,9 @@ import {
   type InvoiceRow,
   type ClientRow,
   type OrgRow,
+  type InvoiceEmailViewModel,
 } from "../email/viewModels.js";
+import { renderInvoiceSent } from "../email/templates/invoiceSent.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -231,4 +233,61 @@ test("buildViewModel defaults reminderOffsetDays to undefined", () => {
   });
 
   assert.equal(vm.reminderOffsetDays, undefined);
+});
+
+// ── Shared test view model ─────────────────────────────────
+
+function createTestViewModel(overrides: Partial<InvoiceEmailViewModel> = {}): InvoiceEmailViewModel {
+  return {
+    invoiceNumber: "INV-2026-0001",
+    invoiceStatus: "sent",
+    clientName: "Acme Corp",
+    clientEmail: "billing@acme.com",
+    clientCompany: "Acme Corporation",
+    orgName: "Freelio Studio",
+    totalFormatted: "$1,080.00",
+    subtotalFormatted: "$1,000.00",
+    taxFormatted: "$80.00",
+    dueDateFormatted: "February 15, 2026",
+    issuedAtFormatted: "January 15, 2026",
+    paidAtFormatted: null,
+    payUrl: "https://app.freelio.net/pay/tok-abc-123",
+    reminderOffsetDays: undefined,
+    ...overrides,
+  };
+}
+
+// ── invoice_sent template ──────────────────────────────────
+
+test("renderInvoiceSent renders without throwing", () => {
+  const result = renderInvoiceSent(createTestViewModel());
+  assert.ok(result.subject);
+  assert.ok(result.html);
+  assert.ok(result.text);
+});
+
+test("renderInvoiceSent subject contains invoice number and org name", () => {
+  const result = renderInvoiceSent(createTestViewModel());
+  assert.ok(result.subject.includes("INV-2026-0001"));
+  assert.ok(result.subject.includes("Freelio Studio"));
+});
+
+test("renderInvoiceSent HTML contains pay URL", () => {
+  const result = renderInvoiceSent(createTestViewModel());
+  assert.ok(result.html.includes("https://app.freelio.net/pay/tok-abc-123"));
+});
+
+test("renderInvoiceSent text contains pay URL", () => {
+  const result = renderInvoiceSent(createTestViewModel());
+  assert.ok(result.text.includes("https://app.freelio.net/pay/tok-abc-123"));
+});
+
+test("renderInvoiceSent includes due date when present", () => {
+  const result = renderInvoiceSent(createTestViewModel());
+  assert.ok(result.html.includes("February 15, 2026"));
+});
+
+test("renderInvoiceSent omits due date when null", () => {
+  const result = renderInvoiceSent(createTestViewModel({ dueDateFormatted: null }));
+  assert.ok(!result.html.includes("Due:"));
 });
