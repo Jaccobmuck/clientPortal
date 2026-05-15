@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.internal.pdf import router as internal_pdf_router
 from app.api.v1.auth import router as auth_router
 from app.api.v1.clients import router as clients_router
 from app.api.v1.expenses import router as expenses_router
@@ -44,6 +45,7 @@ def create_app() -> FastAPI:
     app.include_router(expenses_router, prefix="/api/v1")
     app.include_router(invoices_router, prefix="/api/v1")
     app.include_router(smoke_router, prefix="/api/v1")
+    app.include_router(internal_pdf_router)
 
     return app
 

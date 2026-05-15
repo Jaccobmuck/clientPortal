@@ -77,13 +77,22 @@ async def smoke_email() -> BaseResponse[SmokeActionStatus]:
     )
 
 
+def _render_smoke_pdf() -> tuple[bytes, str]:
+    from app.pdf.smoke import smoke_render_pdf
+
+    return smoke_render_pdf()
+
+
 @router.post("/pdf")
 async def smoke_pdf() -> BaseResponse[SmokeActionStatus]:
+    pdf_bytes, _filename = _render_smoke_pdf()
+    file_size_kb = len(pdf_bytes) / 1024
+
     return await _action_response(
         action="pdf",
-        state="placeholder",
-        implemented=False,
-        message="PDF smoke action is a placeholder and does not render or upload files.",
+        state="ok",
+        implemented=True,
+        message=f"PDF rendered successfully ({file_size_kb:.1f} KB). WeasyPrint and Jinja2 template are operational.",
     )
 
 
