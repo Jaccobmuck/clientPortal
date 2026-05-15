@@ -28,6 +28,7 @@ import {
   validateRecipient,
   EmailSafetyError,
 } from "../email/safety.js";
+import { buildNotificationTypeKey } from "../email/notificationLog.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -502,4 +503,30 @@ test("validateRecipient rejects missing domain dot", () => {
     () => validateRecipient("test@localhost"),
     (err) => err instanceof EmailSafetyError && err.permanent === true,
   );
+});
+
+// ── Notification log type keys ─────────────────────────────
+
+test("buildNotificationTypeKey for invoice_sent", () => {
+  assert.equal(buildNotificationTypeKey("invoice_sent"), "email:invoice_sent");
+});
+
+test("buildNotificationTypeKey for payment_received", () => {
+  assert.equal(buildNotificationTypeKey("payment_received"), "email:payment_received");
+});
+
+test("buildNotificationTypeKey for payment_confirmed", () => {
+  assert.equal(buildNotificationTypeKey("payment_confirmed"), "email:payment_confirmed");
+});
+
+test("buildNotificationTypeKey for overdue_reminder without offset", () => {
+  assert.equal(buildNotificationTypeKey("overdue_reminder"), "email:overdue_reminder");
+});
+
+test("buildNotificationTypeKey for overdue_reminder with offset", () => {
+  assert.equal(buildNotificationTypeKey("overdue_reminder", 7), "email:overdue_reminder:7");
+});
+
+test("buildNotificationTypeKey for overdue_reminder with offset 0", () => {
+  assert.equal(buildNotificationTypeKey("overdue_reminder", 0), "email:overdue_reminder:0");
 });
