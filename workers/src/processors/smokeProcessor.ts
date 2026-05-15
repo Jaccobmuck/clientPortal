@@ -24,7 +24,13 @@ export function createSmokeProcessor(queueName: InvoiceQueueName): Processor<Smo
 }
 
 export function createSmokeWorkers(): Worker<SmokeQueueJob>[] {
-  return INVOICE_QUEUE_NAMES.map(
+  return createSmokeWorkersForQueues(INVOICE_QUEUE_NAMES);
+}
+
+export function createSmokeWorkersForQueues(
+  queueNames: readonly InvoiceQueueName[],
+): Worker<SmokeQueueJob>[] {
+  return queueNames.map(
     (queueName) =>
       new Worker<SmokeQueueJob>(queueName, createSmokeProcessor(queueName), {
         connection: getSharedRedisConnection(),
