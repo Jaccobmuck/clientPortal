@@ -46,9 +46,13 @@ def mock_smoke_integrations(monkeypatch: pytest.MonkeyPatch) -> None:
     async def fake_stripe_transaction() -> str:
         return "pi_smoke_test"
 
+    def fake_render_smoke_pdf() -> tuple[bytes, str]:
+        return b"%PDF-1.4 fake", "smoke_invoice.pdf"
+
     monkeypatch.setattr(smoke_module, "send_smoke_notification", fake_notification)
     monkeypatch.setattr(smoke_module, "check_stripe_credentials", fake_stripe_check)
     monkeypatch.setattr(smoke_module, "create_stripe_test_transaction", fake_stripe_transaction)
+    monkeypatch.setattr(smoke_module, "_render_smoke_pdf", fake_render_smoke_pdf)
 
 
 def _client() -> TestClient:
@@ -106,7 +110,7 @@ def test_smoke_config_returns_presence_without_secret_values() -> None:
     [
         ("/queue", "placeholder", False),
         ("/email", "ok", True),
-        ("/pdf", "placeholder", False),
+        ("/pdf", "ok", True),
         ("/reminder", "placeholder", False),
         ("/stripe", "ok", True),
         ("/stripe/transaction", "ok", True),
