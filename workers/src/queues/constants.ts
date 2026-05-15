@@ -18,6 +18,7 @@ export type InvoiceQueueName = (typeof INVOICE_QUEUE_NAMES)[number];
 export const JOB_NAMES = {
   INVOICE_PDF: "invoice.pdf",
   INVOICE_INITIAL_EMAIL: "invoice.email.initial",
+  INVOICE_REMINDER_EMAIL: "invoice.email.reminder",
   INVOICE_REMINDER_SCHEDULE: "invoice.reminder.schedule",
   INVOICE_REMINDER_SEND: "invoice.reminder.send",
   STRIPE_WEBHOOK: "stripe.webhook",
