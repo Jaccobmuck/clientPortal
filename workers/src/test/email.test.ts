@@ -23,6 +23,11 @@ import { renderInvoiceSent } from "../email/templates/invoiceSent.js";
 import { renderPaymentReceived } from "../email/templates/paymentReceived.js";
 import { renderPaymentConfirmed } from "../email/templates/paymentConfirmed.js";
 import { renderOverdueReminder } from "../email/templates/overdueReminder.js";
+import {
+  validateEmailSafety,
+  validateRecipient,
+  EmailSafetyError,
+} from "../email/safety.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -373,4 +378,128 @@ test("renderOverdueReminder uses singular day for offset 1", () => {
 test("renderOverdueReminder omits offset note when undefined", () => {
   const result = renderOverdueReminder(createTestViewModel({ reminderOffsetDays: undefined }));
   assert.ok(!result.html.includes("past due"));
+});
+
+// ── Email safety rules ─────────────────────────────────────
+
+test("validateEmailSafety allows invoice_sent for sent status", () => {
+  assert.doesNotThrow(() => validateEmailSafety("invoice_sent", "sent"));
+});
+
+test("validateEmailSafety allows invoice_sent for locked status", () => {
+  assert.doesNotThrow(() => validateEmailSafety("invoice_sent", "locked"));
+});
+
+test("validateEmailSafety rejects invoice_sent for draft", () => {
+  assert.throws(
+    () => validateEmailSafety("invoice_sent", "draft"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateEmailSafety rejects invoice_sent for void", () => {
+  assert.throws(
+    () => validateEmailSafety("invoice_sent", "void"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateEmailSafety rejects invoice_sent for paid", () => {
+  assert.throws(
+    () => validateEmailSafety("invoice_sent", "paid"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateEmailSafety allows payment_received for sent", () => {
+  assert.doesNotThrow(() => validateEmailSafety("payment_received", "sent"));
+});
+
+test("validateEmailSafety allows payment_received for locked", () => {
+  assert.doesNotThrow(() => validateEmailSafety("payment_received", "locked"));
+});
+
+test("validateEmailSafety allows payment_received for paid", () => {
+  assert.doesNotThrow(() => validateEmailSafety("payment_received", "paid"));
+});
+
+test("validateEmailSafety allows payment_confirmed for paid", () => {
+  assert.doesNotThrow(() => validateEmailSafety("payment_confirmed", "paid"));
+});
+
+test("validateEmailSafety rejects payment_confirmed for sent", () => {
+  assert.throws(
+    () => validateEmailSafety("payment_confirmed", "sent"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateEmailSafety allows overdue_reminder for sent", () => {
+  assert.doesNotThrow(() => validateEmailSafety("overdue_reminder", "sent"));
+});
+
+test("validateEmailSafety allows overdue_reminder for overdue", () => {
+  assert.doesNotThrow(() => validateEmailSafety("overdue_reminder", "overdue"));
+});
+
+test("validateEmailSafety rejects overdue_reminder for paid", () => {
+  assert.throws(
+    () => validateEmailSafety("overdue_reminder", "paid"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateEmailSafety rejects overdue_reminder for void", () => {
+  assert.throws(
+    () => validateEmailSafety("overdue_reminder", "void"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateEmailSafety rejects overdue_reminder for draft", () => {
+  assert.throws(
+    () => validateEmailSafety("overdue_reminder", "draft"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateEmailSafety rejects overdue_reminder for disputed", () => {
+  assert.throws(
+    () => validateEmailSafety("overdue_reminder", "disputed"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+// ── Recipient validation ───────────────────────────────────
+
+test("validateRecipient accepts valid email", () => {
+  assert.doesNotThrow(() => validateRecipient("test@example.com"));
+});
+
+test("validateRecipient rejects null", () => {
+  assert.throws(
+    () => validateRecipient(null),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateRecipient rejects undefined", () => {
+  assert.throws(
+    () => validateRecipient(undefined),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateRecipient rejects empty string", () => {
+  assert.throws(
+    () => validateRecipient(""),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
+});
+
+test("validateRecipient rejects missing domain dot", () => {
+  assert.throws(
+    () => validateRecipient("test@localhost"),
+    (err) => err instanceof EmailSafetyError && err.permanent === true,
+  );
 });
