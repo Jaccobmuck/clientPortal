@@ -20,6 +20,8 @@ import {
   type InvoiceEmailViewModel,
 } from "../email/viewModels.js";
 import { renderInvoiceSent } from "../email/templates/invoiceSent.js";
+import { renderPaymentReceived } from "../email/templates/paymentReceived.js";
+import { renderPaymentConfirmed } from "../email/templates/paymentConfirmed.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -290,4 +292,49 @@ test("renderInvoiceSent includes due date when present", () => {
 test("renderInvoiceSent omits due date when null", () => {
   const result = renderInvoiceSent(createTestViewModel({ dueDateFormatted: null }));
   assert.ok(!result.html.includes("Due:"));
+});
+
+// ── payment_received template ──────────────────────────────
+
+test("renderPaymentReceived renders without throwing", () => {
+  const result = renderPaymentReceived(createTestViewModel());
+  assert.ok(result.subject);
+  assert.ok(result.html);
+  assert.ok(result.text);
+});
+
+test("renderPaymentReceived subject contains invoice number", () => {
+  const result = renderPaymentReceived(createTestViewModel());
+  assert.ok(result.subject.includes("INV-2026-0001"));
+});
+
+test("renderPaymentReceived does not contain pay URL", () => {
+  const result = renderPaymentReceived(createTestViewModel());
+  assert.ok(!result.html.includes("View &amp; Pay"));
+  assert.ok(!result.html.includes("/pay/tok-abc-123"));
+});
+
+// ── payment_confirmed template ─────────────────────────────
+
+test("renderPaymentConfirmed renders without throwing", () => {
+  const result = renderPaymentConfirmed(createTestViewModel({ paidAtFormatted: "January 20, 2026" }));
+  assert.ok(result.subject);
+  assert.ok(result.html);
+  assert.ok(result.text);
+});
+
+test("renderPaymentConfirmed subject contains invoice number", () => {
+  const result = renderPaymentConfirmed(createTestViewModel());
+  assert.ok(result.subject.includes("INV-2026-0001"));
+});
+
+test("renderPaymentConfirmed does not contain pay URL", () => {
+  const result = renderPaymentConfirmed(createTestViewModel());
+  assert.ok(!result.html.includes("View &amp; Pay"));
+  assert.ok(!result.html.includes("/pay/tok-abc-123"));
+});
+
+test("renderPaymentConfirmed includes paid date when present", () => {
+  const result = renderPaymentConfirmed(createTestViewModel({ paidAtFormatted: "January 20, 2026" }));
+  assert.ok(result.html.includes("January 20, 2026"));
 });
