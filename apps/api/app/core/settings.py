@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
     FREE_TIER_ORG_LIMIT: int = 1
     RECEIPT_BUCKET: str = "receipts"
+    INVOICE_PDF_BUCKET: str = "invoice-pdfs"
     RECEIPT_MAX_SIZE_MB: int = 10
     RESEND_API_KEY: str | None = None
     RESEND_FROM_EMAIL: str | None = None
