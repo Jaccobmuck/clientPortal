@@ -30,6 +30,7 @@ import {
 } from "../email/safety.js";
 import { buildNotificationTypeKey } from "../email/notificationLog.js";
 import { renderEmail } from "../email/renderEmail.js";
+import { createFakeViewModel, renderAllTemplates } from "../email/smokeHelpers.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -559,4 +560,36 @@ test("renderEmail throws for unknown type", () => {
     () => renderEmail("unknown_type" as any, createTestViewModel()),
     /Unknown email type/,
   );
+});
+
+// ── Smoke helpers ──────────────────────────────────────────
+
+test("createFakeViewModel returns valid shape", () => {
+  const vm = createFakeViewModel();
+  assert.equal(vm.invoiceNumber, "SMOKE-001");
+  assert.equal(vm.clientName, "Smoke Test Client");
+  assert.equal(vm.orgName, "Freelio Smoke");
+  assert.ok(vm.payUrl);
+  assert.ok(vm.totalFormatted);
+});
+
+test("createFakeViewModel accepts overrides", () => {
+  const vm = createFakeViewModel({ invoiceNumber: "CUSTOM-999" });
+  assert.equal(vm.invoiceNumber, "CUSTOM-999");
+  assert.equal(vm.clientName, "Smoke Test Client");
+});
+
+test("renderAllTemplates renders all 4 templates without throwing", () => {
+  const results = renderAllTemplates();
+  assert.equal(Object.keys(results).length, 4);
+  assert.ok(results.invoice_sent.subject);
+  assert.ok(results.payment_received.subject);
+  assert.ok(results.payment_confirmed.subject);
+  assert.ok(results.overdue_reminder.subject);
+});
+
+test("renderAllTemplates accepts custom view model", () => {
+  const vm = createFakeViewModel({ orgName: "Custom Org" });
+  const results = renderAllTemplates(vm);
+  assert.ok(results.invoice_sent.subject.includes("Custom Org"));
 });
