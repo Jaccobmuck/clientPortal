@@ -29,6 +29,7 @@ import {
   EmailSafetyError,
 } from "../email/safety.js";
 import { buildNotificationTypeKey } from "../email/notificationLog.js";
+import { renderEmail } from "../email/renderEmail.js";
 
 // ── Resend config ──────────────────────────────────────────
 
@@ -529,4 +530,33 @@ test("buildNotificationTypeKey for overdue_reminder with offset", () => {
 
 test("buildNotificationTypeKey for overdue_reminder with offset 0", () => {
   assert.equal(buildNotificationTypeKey("overdue_reminder", 0), "email:overdue_reminder:0");
+});
+
+// ── renderEmail dispatcher ─────────────────────────────────
+
+test("renderEmail dispatches invoice_sent", () => {
+  const result = renderEmail("invoice_sent", createTestViewModel());
+  assert.ok(result.subject.includes("INV-2026-0001"));
+});
+
+test("renderEmail dispatches payment_received", () => {
+  const result = renderEmail("payment_received", createTestViewModel());
+  assert.ok(result.subject.includes("Payment received"));
+});
+
+test("renderEmail dispatches payment_confirmed", () => {
+  const result = renderEmail("payment_confirmed", createTestViewModel());
+  assert.ok(result.subject.includes("Payment confirmed"));
+});
+
+test("renderEmail dispatches overdue_reminder", () => {
+  const result = renderEmail("overdue_reminder", createTestViewModel());
+  assert.ok(result.subject.includes("overdue"));
+});
+
+test("renderEmail throws for unknown type", () => {
+  assert.throws(
+    () => renderEmail("unknown_type" as any, createTestViewModel()),
+    /Unknown email type/,
+  );
 });
