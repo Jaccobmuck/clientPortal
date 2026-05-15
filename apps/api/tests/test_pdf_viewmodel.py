@@ -92,9 +92,7 @@ def test_format_quantity():
 
 
 def test_build_pdf_view_model():
-    vm = build_pdf_view_model(
-        _fake_invoice(), _fake_client(), _fake_org(), _fake_line_items()
-    )
+    vm = build_pdf_view_model(_fake_invoice(), _fake_client(), _fake_org(), _fake_line_items())
     assert isinstance(vm, InvoicePdfViewModel)
     assert vm.invoice_number == "INV-0001"
     assert vm.invoice_status == "sent"
