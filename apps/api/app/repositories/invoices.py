@@ -147,9 +147,7 @@ def _is_public_viewable_invoice(row: dict[str, Any]) -> bool:
     return status in {"sent", "locked", "paid", "disputed", "resolved"}
 
 
-async def _get_public_org(
-    client: AsyncPostgrestClient, *, org_id: UUID
-) -> dict[str, Any] | None:
+async def _get_public_org(client: AsyncPostgrestClient, *, org_id: UUID) -> dict[str, Any] | None:
     try:
         response = (
             await client.from_("organizations")

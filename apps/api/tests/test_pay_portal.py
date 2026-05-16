@@ -91,7 +91,9 @@ def _record(**overrides: Any) -> PublicInvoiceRecord:
     return PublicInvoiceRecord(**values)
 
 
-async def _stub_invoice(monkeypatch: pytest.MonkeyPatch, record: PublicInvoiceRecord | None) -> None:
+async def _stub_invoice(
+    monkeypatch: pytest.MonkeyPatch, record: PublicInvoiceRecord | None
+) -> None:
     async def fake_get_public_invoice_by_pay_token(
         _client: AsyncPostgrestClient, *, token: UUID
     ) -> PublicInvoiceRecord | None:
