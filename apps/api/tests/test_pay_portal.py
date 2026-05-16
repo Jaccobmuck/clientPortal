@@ -106,7 +106,7 @@ async def _stub_invoice(monkeypatch: pytest.MonkeyPatch, record: PublicInvoiceRe
 
 async def test_unknown_token_returns_not_found(monkeypatch: pytest.MonkeyPatch) -> None:
     await _stub_invoice(monkeypatch, None)
-    service = PayPortalService(_db(), pdf_storage=cast(Any, FakePdfStorage()))
+    service = PayPortalService(_db(), pdf_storage=cast("Any", FakePdfStorage()))
 
     with pytest.raises(NotFoundError) as exc_info:
         await service.get_public_invoice_view(raw_token=str(uuid4()))
@@ -119,7 +119,7 @@ async def test_draft_invoice_returns_not_found(monkeypatch: pytest.MonkeyPatch) 
         monkeypatch,
         _record(status=InvoiceStatus.DRAFT.value, is_public_viewable=False),
     )
-    service = PayPortalService(_db(), pdf_storage=cast(Any, FakePdfStorage()))
+    service = PayPortalService(_db(), pdf_storage=cast("Any", FakePdfStorage()))
 
     with pytest.raises(NotFoundError):
         await service.get_public_invoice_view(raw_token=str(uuid4()))
@@ -128,7 +128,7 @@ async def test_draft_invoice_returns_not_found(monkeypatch: pytest.MonkeyPatch) 
 async def test_sent_invoice_returns_public_invoice_view(monkeypatch: pytest.MonkeyPatch) -> None:
     storage = FakePdfStorage()
     await _stub_invoice(monkeypatch, _record(pdf_storage_path="invoices/inv.pdf"))
-    service = PayPortalService(_db(), pdf_storage=cast(Any, storage))
+    service = PayPortalService(_db(), pdf_storage=cast("Any", storage))
 
     view = await service.get_public_invoice_view(raw_token=str(uuid4()))
 
@@ -149,7 +149,7 @@ async def test_paid_invoice_is_visible_but_not_payable(monkeypatch: pytest.Monke
             amount_paid_cents=12000,
         ),
     )
-    service = PayPortalService(_db(), pdf_storage=cast(Any, FakePdfStorage()))
+    service = PayPortalService(_db(), pdf_storage=cast("Any", FakePdfStorage()))
 
     view = await service.get_public_invoice_view(raw_token=str(uuid4()))
 
@@ -160,7 +160,7 @@ async def test_paid_invoice_is_visible_but_not_payable(monkeypatch: pytest.Monke
 async def test_invoice_with_no_pdf_returns_null_pdf_url(monkeypatch: pytest.MonkeyPatch) -> None:
     storage = FakePdfStorage()
     await _stub_invoice(monkeypatch, _record(pdf_storage_path=None))
-    service = PayPortalService(_db(), pdf_storage=cast(Any, storage))
+    service = PayPortalService(_db(), pdf_storage=cast("Any", storage))
 
     view = await service.get_public_invoice_view(raw_token=str(uuid4()))
 
@@ -170,7 +170,7 @@ async def test_invoice_with_no_pdf_returns_null_pdf_url(monkeypatch: pytest.Monk
 
 async def test_pdf_signing_failure_returns_null_pdf_url(monkeypatch: pytest.MonkeyPatch) -> None:
     await _stub_invoice(monkeypatch, _record(pdf_storage_path="invoices/inv.pdf"))
-    service = PayPortalService(_db(), pdf_storage=cast(Any, FakePdfStorage(fail=True)))
+    service = PayPortalService(_db(), pdf_storage=cast("Any", FakePdfStorage(fail=True)))
 
     view = await service.get_public_invoice_view(raw_token=str(uuid4()))
 
@@ -179,7 +179,7 @@ async def test_pdf_signing_failure_returns_null_pdf_url(monkeypatch: pytest.Monk
 
 async def test_public_response_excludes_private_fields(monkeypatch: pytest.MonkeyPatch) -> None:
     await _stub_invoice(monkeypatch, _record())
-    service = PayPortalService(_db(), pdf_storage=cast(Any, FakePdfStorage()))
+    service = PayPortalService(_db(), pdf_storage=cast("Any", FakePdfStorage()))
 
     payload = (await service.get_public_invoice_view(raw_token=str(uuid4()))).model_dump(
         mode="json"
