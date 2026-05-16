@@ -11,6 +11,7 @@ from app.api.v1.org import router as org_router
 from app.api.v1.pay import router as pay_router
 from app.api.v1.projects import router as projects_router
 from app.api.v1.smoke import router as smoke_router
+from app.api.v1.stripe_connect import router as stripe_connect_router
 from app.core.lifespan import lifespan
 from app.core.settings import settings
 from app.middleware.exception_handlers import register_exception_handlers
@@ -45,6 +46,7 @@ def create_app() -> FastAPI:
     app.include_router(expenses_router, prefix="/api/v1")
     app.include_router(invoices_router, prefix="/api/v1")
     app.include_router(pay_router, prefix="/api/v1")
+    app.include_router(stripe_connect_router, prefix="/api/v1")
     app.include_router(smoke_router, prefix="/api/v1")
 
     return app
