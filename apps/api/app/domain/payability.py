@@ -37,7 +37,7 @@ def evaluate_invoice_payability(invoice: PayabilityInput) -> PayabilityResult:
         return PayabilityResult(False, "not_payable_status")
     if not invoice.stripe_account_id or not invoice.stripe_account_id.strip():
         return PayabilityResult(False, "payments_unavailable")
-    if invoice.stripe_payments_enabled is False:
+    if invoice.stripe_payments_enabled is not True:
         return PayabilityResult(False, "payments_unavailable")
 
     return PayabilityResult(True)

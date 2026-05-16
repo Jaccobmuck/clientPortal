@@ -33,7 +33,7 @@ _LIST_COLUMNS = "id, client_id, invoice_number, status, issued_at, due_date, tot
 PAY_TOKEN_NULLABLE = False
 
 _PUBLIC_INVOICE_COLUMNS = (
-    "id, org_id, client_id, invoice_number, status, due_date, issued_at, "
+    "id, org_id, client_id, pay_token, invoice_number, status, due_date, issued_at, "
     "sent_at, paid_at, voided_at, locked, subtotal, tax_amount, total, currency, "
     "discount_amount, pdf_storage_path"
 )
@@ -59,6 +59,8 @@ class PublicInvoiceLineItemRecord:
 @dataclass(frozen=True)
 class PublicInvoiceRecord:
     invoice_id: UUID
+    org_id: UUID
+    pay_token: UUID
     status: str
     invoice_number: str
     issued_at: Any | None
@@ -494,6 +496,8 @@ async def get_public_invoice_by_pay_token(
         client_name=client_row["name"],
         client_email=client_row.get("email"),
         line_items=line_items,
+        org_id=org_id,
+        pay_token=UUID(str(invoice["pay_token"])),
         pdf_storage_path=invoice.get("pdf_storage_path"),
     )
 

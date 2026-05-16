@@ -46,3 +46,8 @@ class PublicInvoiceView(BaseModel):
     line_items: list[PublicInvoiceLineItem]
 
     pdf_url: str | None = None
+
+
+class CheckoutSessionResponse(BaseModel):
+    session_id: str
+    checkout_url: str
