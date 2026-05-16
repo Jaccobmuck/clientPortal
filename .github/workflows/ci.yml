@@ -26,7 +26,7 @@ jobs:
         run: uv run ruff format --check .
         working-directory: apps/api
       - name: Mypy
-        run: uv run mypy app
+        run: uv run mypy --config-file ../../pyproject.toml app
         working-directory: apps/api
 
   api-test:
