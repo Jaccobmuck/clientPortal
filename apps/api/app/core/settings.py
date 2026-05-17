@@ -39,6 +39,9 @@ class Settings(BaseSettings):
     STRIPE_PLATFORM_FEE_CENTS: int = Field(default=0, ge=0)
     STRIPE_CONNECT_REFRESH_URL: str | None = None
     STRIPE_CONNECT_RETURN_URL: str | None = None
+    STRIPE_BILLING_ADDITIONAL_ORG_PRICE_ID: str | None = None
+    STRIPE_BILLING_BASE_PRICE_ID: str | None = None
+    BILLING_ADDITIONAL_ORG_PRICE_CENTS: int = Field(default=700, ge=0)
     ENABLE_STRIPE_SMOKE_TRANSACTIONS: bool = False
     WEB_BASE_URL: str | None = None
     RECEIPT_ALLOWED_TYPES: list[str] = [
