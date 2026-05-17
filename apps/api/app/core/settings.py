@@ -37,6 +37,8 @@ class Settings(BaseSettings):
     SMOKE_TEST_EMAIL: str = "jacobmuck2004@gmail.com"
     STRIPE_SECRET_KEY: str | None = None
     STRIPE_PLATFORM_FEE_CENTS: int = Field(default=0, ge=0)
+    STRIPE_CONNECT_REFRESH_URL: str | None = None
+    STRIPE_CONNECT_RETURN_URL: str | None = None
     ENABLE_STRIPE_SMOKE_TRANSACTIONS: bool = False
     WEB_BASE_URL: str | None = None
     RECEIPT_ALLOWED_TYPES: list[str] = [

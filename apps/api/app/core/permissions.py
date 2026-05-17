@@ -34,6 +34,10 @@ def can_manage_billing(role: OrgRole) -> bool:
     return role is OrgRole.OWNER
 
 
+def can_manage_payouts(role: OrgRole) -> bool:
+    return role in _MANAGER_ROLES
+
+
 def can_delete_org(role: OrgRole) -> bool:
     return role is OrgRole.OWNER
 
