@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import date
 from decimal import Decimal
 from typing import Any, cast
@@ -30,6 +31,60 @@ _MAX_INVOICE_NUMBER_RETRIES = 3
 _LIST_COLUMNS = "id, client_id, invoice_number, status, issued_at, due_date, total, created_at"
 
 PAY_TOKEN_NULLABLE = False
+
+_PUBLIC_INVOICE_COLUMNS = (
+    "id, org_id, client_id, pay_token, invoice_number, status, due_date, issued_at, "
+    "sent_at, paid_at, voided_at, locked, subtotal, tax_amount, total, currency, "
+    "discount_amount, pdf_storage_path"
+)
+
+_PUBLIC_ORG_COLUMNS = (
+    "id, name, logo_url, brand_color, support_email, "
+    "stripe_connected_account_id, stripe_payments_enabled"
+)
+
+_PUBLIC_CLIENT_COLUMNS = "id, name, email"
+
+_PAID_PAYMENT_STATUSES = frozenset({"paid", "succeeded", "complete", "completed"})
+
+
+@dataclass(frozen=True)
+class PublicInvoiceLineItemRecord:
+    description: str
+    quantity: str
+    unit_amount_cents: int
+    line_total_cents: int
+
+
+@dataclass(frozen=True)
+class PublicInvoiceRecord:
+    invoice_id: UUID
+    org_id: UUID
+    pay_token: UUID
+    status: str
+    invoice_number: str
+    issued_at: Any | None
+    due_at: Any | None
+    paid_at: Any | None
+    voided_at: Any | None
+    is_public_viewable: bool
+    subtotal_cents: int
+    tax_cents: int
+    discount_cents: int
+    total_cents: int
+    amount_paid_cents: int
+    amount_due_cents: int
+    currency: str
+    org_name: str
+    org_logo_url: str | None
+    org_brand_color: str | None
+    org_support_email: str | None
+    stripe_account_id: str | None
+    stripe_payments_enabled: bool | None
+    client_name: str
+    client_email: str | None
+    line_items: list[PublicInvoiceLineItemRecord]
+    pdf_storage_path: str | None
 
 
 def _row_to_line_item(row: dict[str, Any]) -> LineItemResponse:
@@ -73,6 +128,77 @@ def _row_to_list_item(row: dict[str, Any]) -> InvoiceListItem:
         due_date=row.get("due_date"),
         total_cents=db_to_cents(row["total"]),
         created_at=row["created_at"],
+    )
+
+
+def _row_to_public_line_item(row: dict[str, Any]) -> PublicInvoiceLineItemRecord:
+    return PublicInvoiceLineItemRecord(
+        description=row["description"],
+        quantity=str(row["quantity"]),
+        unit_amount_cents=db_to_cents(row["unit_price"]),
+        line_total_cents=db_to_cents(row["amount"]),
+    )
+
+
+def _is_public_viewable_invoice(row: dict[str, Any]) -> bool:
+    status = str(row.get("status", "")).strip().lower()
+    if status == "draft":
+        return False
+    if status == "void":
+        return bool(row.get("sent_at") or row.get("locked"))
+    return status in {"sent", "locked", "paid", "disputed", "resolved"}
+
+
+async def _get_public_org(client: AsyncPostgrestClient, *, org_id: UUID) -> dict[str, Any] | None:
+    try:
+        response = (
+            await client.from_("organizations")
+            .select(_PUBLIC_ORG_COLUMNS)
+            .eq("id", str(org_id))
+            .limit(1)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    return rows[0] if rows else None
+
+
+async def _get_public_client(
+    client: AsyncPostgrestClient, *, client_id: UUID
+) -> dict[str, Any] | None:
+    try:
+        response = (
+            await client.from_("clients")
+            .select(_PUBLIC_CLIENT_COLUMNS)
+            .eq("id", str(client_id))
+            .limit(1)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    return rows[0] if rows else None
+
+
+async def _sum_paid_payments_cents(client: AsyncPostgrestClient, *, invoice_id: UUID) -> int:
+    try:
+        response = (
+            await client.from_("payments")
+            .select("amount, status")
+            .eq("invoice_id", str(invoice_id))
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    return sum(
+        db_to_cents(row["amount"])
+        for row in rows
+        if str(row.get("status", "")).strip().lower() in _PAID_PAYMENT_STATUSES
     )
 
 
@@ -248,6 +374,23 @@ async def list_line_items(
     return [_row_to_line_item(r) for r in rows]
 
 
+async def list_public_line_items(
+    client: AsyncPostgrestClient, *, invoice_id: UUID
+) -> list[PublicInvoiceLineItemRecord]:
+    try:
+        response = (
+            await client.from_("invoice_line_items")
+            .select("description, quantity, unit_price, amount, sort_order")
+            .eq("invoice_id", str(invoice_id))
+            .order("sort_order")
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    return [_row_to_public_line_item(r) for r in rows]
+
+
 async def get_invoice(
     client: AsyncPostgrestClient, *, org_id: UUID, invoice_id: UUID
 ) -> InvoiceResponse | None:
@@ -292,6 +435,71 @@ async def get_invoice_by_pay_token(
     invoice_id = UUID(str(rows[0]["id"]))
     items = await list_line_items(client, invoice_id=invoice_id)
     return _row_to_response(rows[0], items)
+
+
+async def get_public_invoice_by_pay_token(
+    client: AsyncPostgrestClient, *, token: UUID
+) -> PublicInvoiceRecord | None:
+    try:
+        response = (
+            await client.from_("invoices")
+            .select(_PUBLIC_INVOICE_COLUMNS)
+            .eq("pay_token", str(token))
+            .limit(1)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    if not rows:
+        return None
+
+    invoice = rows[0]
+    invoice_id = UUID(str(invoice["id"]))
+    org_id = UUID(str(invoice["org_id"]))
+    client_id = UUID(str(invoice["client_id"]))
+
+    org = await _get_public_org(client, org_id=org_id)
+    client_row = await _get_public_client(client, client_id=client_id)
+    if org is None or client_row is None:
+        raise InternalError("invoice public dependencies not found")
+
+    line_items = await list_public_line_items(client, invoice_id=invoice_id)
+    amount_paid_cents = await _sum_paid_payments_cents(client, invoice_id=invoice_id)
+    total_cents = db_to_cents(invoice["total"])
+    if str(invoice.get("status", "")).strip().lower() == "paid" and amount_paid_cents == 0:
+        amount_paid_cents = total_cents
+
+    return PublicInvoiceRecord(
+        invoice_id=invoice_id,
+        status=str(invoice["status"]),
+        invoice_number=invoice["invoice_number"],
+        issued_at=invoice.get("issued_at"),
+        due_at=invoice.get("due_date"),
+        paid_at=invoice.get("paid_at"),
+        voided_at=invoice.get("voided_at"),
+        is_public_viewable=_is_public_viewable_invoice(invoice),
+        subtotal_cents=db_to_cents(invoice["subtotal"]),
+        tax_cents=db_to_cents(invoice["tax_amount"]),
+        discount_cents=db_to_cents(invoice.get("discount_amount") or 0),
+        total_cents=total_cents,
+        amount_paid_cents=amount_paid_cents,
+        amount_due_cents=max(total_cents - amount_paid_cents, 0),
+        currency=str(invoice.get("currency") or "usd").lower(),
+        org_name=org["name"],
+        org_logo_url=org.get("logo_url"),
+        org_brand_color=org.get("brand_color"),
+        org_support_email=org.get("support_email"),
+        stripe_account_id=org.get("stripe_connected_account_id"),
+        stripe_payments_enabled=org.get("stripe_payments_enabled"),
+        client_name=client_row["name"],
+        client_email=client_row.get("email"),
+        line_items=line_items,
+        org_id=org_id,
+        pay_token=UUID(str(invoice["pay_token"])),
+        pdf_storage_path=invoice.get("pdf_storage_path"),
+    )
 
 
 async def rotate_invoice_pay_token(

@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import Any, cast
 from uuid import UUID
 
@@ -16,6 +17,23 @@ from app.schemas.org import MemberResponse, OrgResponse
 
 _ORG_COLUMNS = "id, name, slug, owner_id, created_at"
 
+_STRIPE_CONNECT_ORG_COLUMNS = (
+    "id, name, stripe_connected_account_id, stripe_connect_onboarding_complete, "
+    "stripe_connect_charges_enabled, stripe_connect_payouts_enabled, "
+    "stripe_connect_details_submitted"
+)
+
+
+@dataclass(frozen=True)
+class StripeConnectOrgRecord:
+    org_id: UUID
+    name: str
+    stripe_connect_account_id: str | None
+    stripe_connect_onboarding_complete: bool
+    stripe_connect_charges_enabled: bool
+    stripe_connect_payouts_enabled: bool
+    stripe_connect_details_submitted: bool
+
 
 def _is_slug_conflict(exc: APIError) -> bool:
     code = getattr(exc, "code", None)
@@ -28,6 +46,18 @@ def _slug_conflict() -> ConflictError:
         "an organization with this slug already exists",
         code="slug_taken",
         field="slug",
+    )
+
+
+def _row_to_stripe_connect_org(row: dict[str, Any]) -> StripeConnectOrgRecord:
+    return StripeConnectOrgRecord(
+        org_id=UUID(str(row["id"])),
+        name=str(row["name"]),
+        stripe_connect_account_id=row.get("stripe_connected_account_id"),
+        stripe_connect_onboarding_complete=bool(row.get("stripe_connect_onboarding_complete")),
+        stripe_connect_charges_enabled=bool(row.get("stripe_connect_charges_enabled")),
+        stripe_connect_payouts_enabled=bool(row.get("stripe_connect_payouts_enabled")),
+        stripe_connect_details_submitted=bool(row.get("stripe_connect_details_submitted")),
     )
 
 
@@ -157,6 +187,49 @@ async def get_membership(
     if not rows:
         return None
     return OrgRole(rows[0]["role"])
+
+
+async def get_stripe_connect_org(
+    client: AsyncPostgrestClient,
+    *,
+    org_id: UUID,
+) -> StripeConnectOrgRecord | None:
+    try:
+        response = (
+            await client.from_("organizations")
+            .select(_STRIPE_CONNECT_ORG_COLUMNS)
+            .eq("id", str(org_id))
+            .limit(1)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    return _row_to_stripe_connect_org(rows[0]) if rows else None
+
+
+async def set_stripe_connect_account_id(
+    client: AsyncPostgrestClient,
+    *,
+    org_id: UUID,
+    account_id: str,
+) -> StripeConnectOrgRecord:
+    try:
+        response = (
+            await client.from_("organizations")
+            .update({"stripe_connected_account_id": account_id})
+            .eq("id", str(org_id))
+            .select(_STRIPE_CONNECT_ORG_COLUMNS)
+            .execute()
+        )
+    except APIError as exc:
+        raise InternalError from exc
+
+    rows = cast("list[dict[str, Any]]", response.data or [])
+    if not rows:
+        raise NotFoundError("organization not found", code="org_not_found")
+    return _row_to_stripe_connect_org(rows[0])
 
 
 async def get_user_by_email(

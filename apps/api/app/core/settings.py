@@ -1,7 +1,7 @@
 from functools import lru_cache
 from typing import Literal
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -30,12 +30,17 @@ class Settings(BaseSettings):
     CORS_ORIGINS: list[str] = ["http://localhost:3000"]
     FREE_TIER_ORG_LIMIT: int = 1
     RECEIPT_BUCKET: str = "receipts"
+    INVOICE_PDF_BUCKET: str = "invoice-pdfs"
     RECEIPT_MAX_SIZE_MB: int = 10
     RESEND_API_KEY: str | None = None
     RESEND_FROM_EMAIL: str | None = None
     SMOKE_TEST_EMAIL: str = "jacobmuck2004@gmail.com"
     STRIPE_SECRET_KEY: str | None = None
+    STRIPE_PLATFORM_FEE_CENTS: int = Field(default=0, ge=0)
+    STRIPE_CONNECT_REFRESH_URL: str | None = None
+    STRIPE_CONNECT_RETURN_URL: str | None = None
     ENABLE_STRIPE_SMOKE_TRANSACTIONS: bool = False
+    WEB_BASE_URL: str | None = None
     RECEIPT_ALLOWED_TYPES: list[str] = [
         "image/jpeg",
         "image/png",
