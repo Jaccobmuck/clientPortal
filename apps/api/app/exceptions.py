@@ -32,6 +32,11 @@ class ValidationError(AppException):
     _default_code = "validation_error"
 
 
+class BadRequestError(AppException):
+    _default_message = "Bad request"
+    _default_code = "bad_request"
+
+
 class ConflictError(AppException):
     _default_message = "Resource conflict"
     _default_code = "conflict"

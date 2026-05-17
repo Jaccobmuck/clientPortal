@@ -9,6 +9,7 @@ from starlette.responses import JSONResponse
 
 from app.exceptions import (
     AppException,
+    BadRequestError,
     ConflictError,
     ForbiddenError,
     InternalError,
@@ -23,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 _STATUS_MAP: dict[type[AppException], int] = {
     NotFoundError: 404,
+    BadRequestError: 400,
     ValidationError: 422,
     ConflictError: 409,
     UnauthorizedError: 401,
